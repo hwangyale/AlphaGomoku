@@ -1,4 +1,4 @@
-from ..global_constant import *
+from ..global_constants import *
 from .swig_board import board as cpp_board
 
 class CPPBoard(object):
