@@ -46,7 +46,7 @@ class CPPBoard(object):
         return self.cpp_board.zobristKey
 
     def get_board(self):
-        _board = self.board.get_board()
+        _board = self.cpp_board.get_board()
         board = []
         for row in range(BOARD_SIZE):
             board.append([_board[flatten(row, col)] for col in range(BOARD_SIZE)])
