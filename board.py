@@ -8,7 +8,9 @@ from .cpp import CPPBoard
 plt.ion()
 
 class Board(CPPBoard):
-    def __init__(self, history=[], visualization=False,
+    def __init__(self, history=[],
+                 toTensor=False,
+                 visualization=False,
                  visualization_time=2,
                  attack_vct_depth=ATTACK_VCT_DEPTH,
                  attack_vct_time=ATTACK_VCT_TIME,
@@ -22,6 +24,10 @@ class Board(CPPBoard):
             raise Exception('illegal actions: {}'.format(
                             [history[i] for i, lg in enumerate(legality) if not lg]))
 
+        self.toTensor = toTensor
+        if toTensor:
+            self.make_board_tensor()
+
         self.visualization = visualization
         self.visualization_time = visualization_time
         self.axes = None if visualization else plt.gca()
@@ -32,16 +38,18 @@ class Board(CPPBoard):
         self.defend_vct_time = defend_vct_time
 
         for action in history:
-            self.move(action, False)
+            self.move(action, False, False)
 
-    def move(self, action, check_legality=True):
+    def move(self, action, check_legality=True, visualization=True):
         if check_legality and not self.check_legality(action):
             raise Exception('illegal action: {}'.format(action))
         if self.is_over:
             raise Exception('the game has been finished')
-        self.cpp_board.move(flatten(action))
         self.legal_actions ^= BINARY_HEPLERS[flatten(action)]
-        if self.visualization:
+        if self.toTensor:
+            self.make_board_tensor(action)
+        self.cpp_board.move(flatten(action))
+        if self.visualization and visualization:
             self.visualize()
 
     def check_legality(self, actions):
@@ -111,9 +119,35 @@ class Board(CPPBoard):
 
         return actions
 
+    def make_board_tensor(self, action=None):
+        if action is None:
+            self.tensors = {BLACK: np.zeros((3, BOARD_SIZE, BOARD_SIZE),
+                            dtype=FLOATX)+np.array([[[0]], [[0]], [[1]]]),
+                            WHITE: np.zeros((3, BOARD_SIZE, BOARD_SIZE),
+                            dtype=FLOATX)+np.array([[[0]], [[0]], [[1]]])}
+            return
+        player = self.player
+        self.tensors[player][(0, )+action] = 1.0
+        self.tensors[player_map(player)][(1, )+action] = 1.0
+        for tensor in self.tensors.values():
+            tensor[(2, )+action] = 0.0
+
+    @property
+    def tensor(self):
+        if not self.toTensor:
+            return None
+        return self.tensors[self.player]
+
     def copy(self):
         new_board = super(Board, self).copy()
         new_board.legal_actions = self.legal_actions
+
+        new_board.toTensor = self.toTensor
+        if self.toTensor:
+            new_board.tensors = {c: t.copy() for c, t in self.tensors.items()}
+        else:
+            new_board.tensors = None
+
         new_board.visualization = False
         new_board.visualization_time = self.visualization_time
         new_board.axes = None
