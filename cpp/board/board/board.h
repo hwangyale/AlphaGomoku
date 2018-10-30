@@ -60,4 +60,36 @@ std::vector<int> get_elements(ISET &set);
 
 int vct(Board &board, int max_depth, double max_time);
 
+class FastBoard
+{
+public:
+	int player = BLACK;
+	int step = 0;
+	bool is_over = false;
+	int winner = -1;
+	int history[STONES+1];
+	U64 zobristKey;
+	static std::vector<U64> zobrist;
+	static std::vector<U64> initZobrist();
+
+	FastBoard();
+	FastBoard(std::vector<int> poses);
+	FastBoard(const FastBoard &copyFastBoard);
+
+	void move(int pos);
+	std::vector<int> get_history();
+	std::vector<int> get_board();
+
+	std::vector<int> get_positions(bool is_player, int gomoku_type);
+	void _get_positions(bool is_player, int gomoku_type, int container[]);
+
+private:
+	int _board[BOARD_SIZE*BOARD_SIZE];
+	void reset();
+	int *gomoku_types[2][6];
+	int *poses[2][6];
+};
+
+int fastVct(FastBoard &fastBoard, int max_depth, double max_time);
+
 #endif
