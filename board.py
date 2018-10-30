@@ -12,6 +12,7 @@ class Board(CPPBoard):
                  toTensor=False,
                  visualization=False,
                  visualization_time=2,
+                 defend=True,
                  attack_vct_depth=ATTACK_VCT_DEPTH,
                  attack_vct_time=ATTACK_VCT_TIME,
                  defend_vct_depth=DEFEND_VCT_DEPTH,
@@ -32,6 +33,7 @@ class Board(CPPBoard):
         self.visualization_time = visualization_time
         self.axes = None if visualization else plt.gca()
 
+        self.defend = defend
         self.attack_vct_depth = attack_vct_depth
         self.attack_vct_time = attack_vct_time
         self.defend_vct_depth = defend_vct_depth
@@ -60,6 +62,9 @@ class Board(CPPBoard):
         legality = []
         action_set = set()
         for action in actions:
+            if not (0 <= action[0] < BOARD_SIZE and 0 <= action[1] < BOARD_SIZE):
+                legality.append(False)
+                continue
             act = flatten(action)
             if act in action_set or legal_actions[act] == '1':
                 legality.append(False)
@@ -73,7 +78,7 @@ class Board(CPPBoard):
         return [unflatten(act) for act in range(BOARD_SIZE**2)
                 if legal_actions[act] == '0']
 
-    def get_potential_actions(self, defend=True,
+    def get_potential_actions(self, defend=None,
                               attack_vct_depth=None, attack_vct_time=None,
                               defend_vct_depth=None, defend_vct_time=None):
         actions = self.get_positions(True, OPEN_FOUR) + self.get_positions(True, FOUR)
@@ -106,7 +111,7 @@ class Board(CPPBoard):
             defend_vct_time = self.defend_vct_time
         legal_actions = self.get_legal_actions()
         actions = []
-        if defend:
+        if (defend is None and self.defend) or defend:
             for action in legal_actions:
                 copy_board = self.copy()
                 copy_board.move(action)
@@ -152,6 +157,7 @@ class Board(CPPBoard):
         new_board.visualization_time = self.visualization_time
         new_board.axes = None
 
+        new_board.defend = self.defend
         new_board.attack_vct_depth = self.attack_vct_depth
         new_board.attack_vct_time = self.attack_vct_time
         new_board.defend_vct_depth = self.defend_vct_depth
