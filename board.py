@@ -1,3 +1,4 @@
+__all__ = ['Board']
 import numpy as np
 import matplotlib.pyplot as plt
 from .global_constants import *
@@ -7,7 +8,12 @@ from .cpp import CPPBoard
 plt.ion()
 
 class Board(CPPBoard):
-    def __init__(self, history=[], visualization=False, visualization_time=2):
+    def __init__(self, history=[], visualization=False,
+                 visualization_time=2,
+                 attack_vct_depth=ATTACK_VCT_DEPTH,
+                 attack_vct_time=ATTACK_VCT_TIME,
+                 defend_vct_depth=DEFEND_VCT_DEPTH,
+                 defend_vct_time=DEFEND_VCT_TIME):
         super(Board, self).__init__()
 
         self.legal_actions = 2**(BOARD_SIZE**2)
@@ -19,6 +25,11 @@ class Board(CPPBoard):
         self.visualization = visualization
         self.visualization_time = visualization_time
         self.axes = None if visualization else plt.gca()
+
+        self.attack_vct_depth = attack_vct_depth
+        self.attack_vct_time = attack_vct_time
+        self.defend_vct_depth = defend_vct_depth
+        self.defend_vct_time = defend_vct_time
 
         for action in history:
             self.move(action, False)
@@ -54,12 +65,63 @@ class Board(CPPBoard):
         return [unflatten(act) for act in range(BOARD_SIZE**2)
                 if legal_actions[act] == '0']
 
+    def get_potential_actions(self, defend=True,
+                              attack_vct_depth=None, attack_vct_time=None,
+                              defend_vct_depth=None, defend_vct_time=None):
+        actions = self.get_positions(True, OPEN_FOUR) + self.get_positions(True, FOUR)
+        if len(actions):
+            return list(set(actions))
+
+        actions = self.get_positions(False, OPEN_FOUR) + self.get_positions(False, FOUR)
+        if len(actions):
+            return list(set(actions))
+
+        actions = self.get_positions(True, OPEN_THREE)
+        if len(actions):
+            return actions
+
+        actions = self.get_positions(False, OPEN_THREE)
+        if len(actions):
+            return actions
+
+        if attack_vct_depth is None:
+            attack_vct_depth = self.attack_vct_depth
+        if attack_vct_time is None:
+            attack_vct_time = self.attack_vct_time
+        action = self.vct(attack_vct_depth, attack_vct_time)
+        if action is not None:
+            return [action]
+
+        if defend_vct_depth is None:
+            defend_vct_depth = self.defend_vct_depth
+        if defend_vct_time is None:
+            defend_vct_time = self.defend_vct_time
+        legal_actions = self.get_legal_actions()
+        actions = []
+        if defend:
+            for action in legal_actions:
+                copy_board = self.copy()
+                copy_board.move(action)
+                if copy_board.vct(defend_vct_depth, defend_vct_time) is None:
+                    actions.append(action)
+            if len(actions) == 0:
+                actions = legal_actions
+        else:
+            actions = legal_actions
+
+        return actions
+
     def copy(self):
         new_board = super(Board, self).copy()
         new_board.legal_actions = self.legal_actions
         new_board.visualization = False
         new_board.visualization_time = self.visualization_time
         new_board.axes = None
+
+        new_board.attack_vct_depth = self.attack_vct_depth
+        new_board.attack_vct_time = self.attack_vct_time
+        new_board.defend_vct_depth = self.defend_vct_depth
+        new_board.defend_vct_time = self.defend_vct_time
         return new_board
 
     def visualize(self, time=None):

@@ -14,7 +14,10 @@ class CPPBoard(object):
         return [unflatten(act) for act in self.cpp_board.get_positions(is_player, gomoku_type)]
 
     def vct(self, max_depth=20, max_time=1):
-        return unflatten(cpp_board.vct(self.cpp_board, max_depth, max_time))
+        action = cppBoard.vct(self.cpp_board, max_depth, max_time)
+        if action < 0:
+            return None
+        return unflatten(action)
 
     @property
     def is_over(self):
@@ -53,7 +56,7 @@ class CPPBoard(object):
         return board
 
     def copy(self):
-        new_board = self.__class__(False)
+        new_board = CPPBoard(False)
         new_board.cpp_board = cppBoard.Board(self.cpp_board)
         return new_board
 
