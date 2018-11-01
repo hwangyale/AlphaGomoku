@@ -21,6 +21,8 @@
 #define OPEN_TWO 5
 #define TWO 6
 
+#define FASTBOARD_CONTAINER 100
+
 #define CLOCKS_PER_SEC ((clock_t)1000)
 
 typedef unsigned long long U64;
@@ -88,8 +90,11 @@ public:
 private:
 	int _board[BOARD_SIZE*BOARD_SIZE];
 	void reset();
-	IVEC gomoku_types[2][5];
-	IVEC actions[2][5];
+	int gomoku_type_container_count = 10;
+	int action_container_count = 10;
+	char gomoku_types[FASTBOARD_CONTAINER];
+	char gomoku_directions[FASTBOARD_CONTAINER];
+	char actions[FASTBOARD_CONTAINER];
 };
 
 class FastBoardTable

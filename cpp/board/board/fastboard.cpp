@@ -19,8 +19,13 @@ void FastBoard::reset()
 	history[0] = 0;
 	is_over = false;
 	winner = -1;
+	gomoku_type_container_count = 10;
+	action_container_count = 10;
+	memset(gomoku_types, 0, gomoku_type_container_count * sizeof(char));
+	memset(gomoku_directions, 0, gomoku_type_container_count * sizeof(char));
+	memset(actions, 0, action_container_count * sizeof(char));
 
-	int i, j;
+	/*int i, j;
 	for (i = 0; i < 2; i++)
 	{
 		for (j = 0; j < 5; j++)
@@ -30,7 +35,7 @@ void FastBoard::reset()
 			actions[i][j].reserve(SINGLE_BOARD_CONTAINER);
 			actions[i][j].clear();
 		}
-	}
+	}*/
 }
 
 FastBoard::FastBoard()
