@@ -26,6 +26,7 @@
 typedef unsigned long long U64;
 typedef int(*MOVE)(int, int);
 typedef std::unordered_set<int> ISET;
+typedef std::vector<int> IVEC;
 
 class Board
 {
@@ -60,6 +61,8 @@ std::vector<int> get_elements(ISET &set);
 
 int vct(Board &board, int max_depth, double max_time);
 
+
+/////////////Fast Board/////////////////////
 class FastBoard
 {
 public:
@@ -73,21 +76,35 @@ public:
 	static std::vector<U64> initZobrist();
 
 	FastBoard();
-	FastBoard(std::vector<int> poses);
+	FastBoard(IVEC history, bool check = true);
 	FastBoard(const FastBoard &copyFastBoard);
 
-	void move(int pos);
-	std::vector<int> get_history();
-	std::vector<int> get_board();
+	void move(int action, bool check = true);
+	IVEC get_history();
+	IVEC get_board();
 
-	std::vector<int> get_positions(bool is_player, int gomoku_type);
-	void _get_positions(bool is_player, int gomoku_type, int container[]);
+	IVEC get_actions(bool is_player, int gomoku_type);
 
 private:
 	int _board[BOARD_SIZE*BOARD_SIZE];
 	void reset();
-	int *gomoku_types[2][6];
-	int *poses[2][6];
+	IVEC gomoku_types[2][5];
+	IVEC actions[2][5];
+};
+
+class FastBoardTable
+{
+public:
+	bool check_table(U64 key, FastBoard &fastboard);
+	void set_table(FastBoard &fastboard);
+	FastBoardTable();
+private:
+	static const int threshold = 10;
+	static const int max_size = 10000;
+	std::unordered_map<U64, int> count_table;
+	std::unordered_map<U64, FastBoard> board_table;
+	std::vector<U64> keys;
+	void reset();
 };
 
 int fastVct(FastBoard &fastBoard, int max_depth, double max_time);

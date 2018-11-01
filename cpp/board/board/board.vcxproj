@@ -87,7 +87,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;FAST_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -147,6 +147,10 @@
   <ItemGroup>
     <ClCompile Include="board.cpp" />
     <ClCompile Include="board_type.cpp" />
+    <ClCompile Include="fastboard.cpp" />
+    <ClCompile Include="fastboard_table.cpp" />
+    <ClCompile Include="fastboard_type.cpp" />
+    <ClCompile Include="fastvct.cpp" />
     <ClCompile Include="vct.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
