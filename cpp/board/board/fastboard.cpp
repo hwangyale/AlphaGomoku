@@ -19,23 +19,8 @@ void FastBoard::reset()
 	history[0] = 0;
 	is_over = false;
 	winner = -1;
-	gomoku_type_container_count = 10;
-	action_container_count = 10;
-	memset(gomoku_types, 0, gomoku_type_container_count * sizeof(char));
-	memset(gomoku_directions, 0, gomoku_type_container_count * sizeof(char));
-	memset(actions, 0, action_container_count * sizeof(char));
-
-	/*int i, j;
-	for (i = 0; i < 2; i++)
-	{
-		for (j = 0; j < 5; j++)
-		{
-			gomoku_types[i][j].reserve(SINGLE_BOARD_CONTAINER);
-			gomoku_types[i][j].clear();
-			actions[i][j].reserve(SINGLE_BOARD_CONTAINER);
-			actions[i][j].clear();
-		}
-	}*/
+	memset(gomoku_type_indice, 0, sizeof(gomoku_type_indice));
+	memset(action_indice, 0, sizeof(action_indice));
 }
 
 FastBoard::FastBoard()
@@ -49,11 +34,11 @@ FastBoard::FastBoard(IVEC history, bool check)
 	if (check)
 	{
 		U64 key = 0;
-		for (i = 1; i <= history_length; i += 2)
+		for (i = 0; i < history_length; i += 2)
 		{
 			key ^= zobrist[2 * history[i]];
 		}
-		for (i = 2; i <= history_length; i += 2)
+		for (i = 1; i < history_length; i += 2)
 		{
 			key ^= zobrist[2 * history[i] + 1];
 		}
@@ -62,7 +47,7 @@ FastBoard::FastBoard(IVEC history, bool check)
 	else
 	{
 		reset();
-		for (i = 1; i <= history_length; i++)
+		for (i = 0; i < history_length; i++)
 		{
 			move(history[i], false);
 		}
@@ -79,30 +64,24 @@ FastBoard::FastBoard(const FastBoard &copyFastBoard)
 	clock_t start = clock();
 	#endif // FAST_DEBUG
 
-	int i, j;
-
 	player = copyFastBoard.player;
 	step = copyFastBoard.step;
 	is_over = copyFastBoard.is_over;
 	winner = copyFastBoard.winner;
-	history[0] = copyFastBoard.history[0];
-	for (i = 1; i <= history[0]; i++)
-	{
-		history[i] = copyFastBoard.history[i];
-	}
+	memcpy(history, copyFastBoard.history, (copyFastBoard.history[0] + 1) * sizeof(int));
 	zobristKey = copyFastBoard.zobristKey;
+	memcpy(_board, copyFastBoard._board, sizeof(_board));
 
-	for (i = 0; i < BOARD_SIZE*BOARD_SIZE; i++)
+	memcpy(gomoku_type_indice, copyFastBoard.gomoku_type_indice, sizeof(gomoku_type_indice));
+	if (gomoku_type_indice[10] > 0)
 	{
-		_board[i] = copyFastBoard._board[i];
+		memcpy(gomoku_types, copyFastBoard.gomoku_types, gomoku_type_indice[10] * sizeof(unsigned char));
 	}
-	for (i = 0; i < 2; i++)
+
+	memcpy(action_indice, copyFastBoard.action_indice, sizeof(action_indice));
+	if (action_indice[10] > 0)
 	{
-		for (j = 0; j < 5; j++)
-		{
-			gomoku_types[i][j] = copyFastBoard.gomoku_types[i][j];
-			actions[i][j] = copyFastBoard.actions[i][j];
-		}
+		memcpy(actions, copyFastBoard.actions, action_indice[10] * sizeof(unsigned char));
 	}
 
 	#ifdef FAST_DEBUG
@@ -110,9 +89,6 @@ FastBoard::FastBoard(const FastBoard &copyFastBoard)
 	#endif // FAST_DEBUG
 
 }
-
-extern void get_potential_actions(int _board[], IVEC gomoku_types[2][5], IVEC actions[2][5], 
-							      int action, int player);
 
 #ifdef FAST_DEBUG
 
@@ -164,7 +140,7 @@ void FastBoard::move(int action, bool check)
 		history[++history[0]] = action;
 		zobristKey ^= zobrist[2 * action + (player == BLACK ? 0 : 1)];
 		player = player == BLACK ? WHITE : BLACK;
-		get_potential_actions(_board, gomoku_types, actions, action, player);
+		get_potential_actions();
 
 		if (check)
 		{
@@ -179,7 +155,20 @@ void FastBoard::move(int action, bool check)
 
 IVEC FastBoard::get_actions(bool is_player, int gomoku_type)
 {
-	return actions[(is_player ? 0 : 1)][gomoku_type-1];
+	int index = (is_player ? 0 : 5) + gomoku_type;
+	/*unsigned char tmp = STONES;
+	IVEC _actions;
+	for (int i = action_indice[index - 1]; i < action_indice[index]; i++)
+	{
+		if (actions[i] == tmp)
+		{
+			continue;
+		}
+		tmp = actions[i];
+		_actions.push_back((int)tmp);
+	}*/
+	IVEC _actions(actions + action_indice[index - 1], actions + action_indice[index]);
+	return _actions;
 }
 
 IVEC FastBoard::get_history()
@@ -208,23 +197,71 @@ std::vector<U64> FastBoard::initZobrist()
 std::vector<U64> FastBoard::zobrist(FastBoard::initZobrist());
 
 #ifdef FAST_DEBUG
+void print_board(FastBoard &board)
+{
+	IVEC _board = board.get_board();
+	for (int i = 0; i < BOARD_SIZE; i++)
+	{
+		for (int j = 0; j < BOARD_SIZE; j++)
+		{
+			if (_board[i*BOARD_SIZE + j] == EMPTY)
+			{
+				std::cout << "_" << ' ';
+			}
+			else
+			{
+				std::cout << _board[i*BOARD_SIZE + j] << ' ';
+			}
+
+		}
+		std::cout << std::endl;
+	}
+}
+
+void print_potential_actions(FastBoard &board)
+{
+	for (int is_player = 1; is_player >= 0; is_player--)
+	{
+		std::cout << "is player: " << is_player << std::endl;
+		for (int gt = OPEN_FOUR; gt <= OPEN_TWO; gt++)
+		{
+			IVEC potential_actions = board.get_actions((bool)is_player, gt);
+			if (potential_actions.size() == 0)
+			{
+				continue;
+			}
+			std::cout << "gomoku type: " << gt << std::endl << " | ";
+			for (IVEC::iterator act = potential_actions.begin(); act != potential_actions.end(); act++)
+			{
+				std::cout << (*act) / BOARD_SIZE << " " << (*act) % BOARD_SIZE << " | ";
+			}
+			std::cout << std::endl;
+		}
+	}
+}
+#endif // FAST_DEBUG
+
+
+#ifdef FAST_DEBUG
 void main()
 {
 	int _actions[16] = { 7 * 15 + 7, 6 * 15 + 7, 6 * 15 + 8, 7 * 15 + 8, 6 * 15 + 6, 6 * 15 + 5,
 		5 * 15 + 6, 4 * 15 + 6, 5 * 15 + 5, 4 * 15 + 4, 7 * 15 + 6, 5 * 15 + 9,
 		8 * 15 + 6, 9 * 15 + 6, 8 * 15 + 7, 8 * 15 + 5 };
 	IVEC actions(_actions, _actions + 16);
-	FastBoard board(actions);
-	IVEC _board = board.get_board();
 
-	for (int i = 0; i < BOARD_SIZE; i++)
+	FastBoard board;
+
+	for (int i = 0; i < 16; i++)
 	{
-		for (int j = 0; j < BOARD_SIZE; j++)
-		{
-			std::cout << _board[i*BOARD_SIZE + j] << ' ';
-		}
+		board.move(actions[i]);
+		print_board(board);
+		std::cout << "player: " << board.player << std::endl;
+		print_potential_actions(board);
 		std::cout << std::endl;
 	}
+
+	
 
 	/*clock_t start = clock();
 

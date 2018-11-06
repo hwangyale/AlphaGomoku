@@ -90,11 +90,12 @@ public:
 private:
 	int _board[BOARD_SIZE*BOARD_SIZE];
 	void reset();
-	int gomoku_type_container_count = 10;
-	int action_container_count = 10;
-	char gomoku_types[FASTBOARD_CONTAINER];
-	char gomoku_directions[FASTBOARD_CONTAINER];
-	char actions[FASTBOARD_CONTAINER];
+	int gomoku_type_indice[11];
+	int action_indice[11];
+	unsigned char gomoku_types[FASTBOARD_CONTAINER];
+	unsigned char gomoku_directions[FASTBOARD_CONTAINER];
+	unsigned char actions[FASTBOARD_CONTAINER];
+	void get_potential_actions();
 };
 
 class FastBoardTable
