@@ -41,5 +41,11 @@
     <ClCompile Include="fastboard_table.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="action_hash.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="gomoku_type_hash.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

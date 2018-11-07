@@ -1,4 +1,5 @@
 #include "board.h"
+#include <stdio.h>
 #include <cstring>
 #include <stdlib.h>
 #include <iostream>
@@ -31,6 +32,7 @@ FastBoard::FastBoard()
 FastBoard::FastBoard(IVEC history, bool check)
 {
 	int i, history_length = (int)history.size();
+	bool in_table = false;
 	if (check)
 	{
 		U64 key = 0;
@@ -42,15 +44,21 @@ FastBoard::FastBoard(IVEC history, bool check)
 		{
 			key ^= zobrist[2 * history[i] + 1];
 		}
-		FASTBOARDTABLE.check_table(key, *this);
+		in_table = FASTBOARDTABLE.check_table(key, *this);
 	}
-	else
+
+	if (!in_table)
 	{
 		reset();
 		for (i = 0; i < history_length; i++)
 		{
-			move(history[i], false);
+			move(history[i], check);
 		}
+	}
+
+	if (check)
+	{
+		FASTBOARDTABLE.set_table(*this);
 	}
 }
 
@@ -155,18 +163,7 @@ void FastBoard::move(int action, bool check)
 
 IVEC FastBoard::get_actions(bool is_player, int gomoku_type)
 {
-	int index = (is_player ? 0 : 5) + gomoku_type;
-	/*unsigned char tmp = STONES;
-	IVEC _actions;
-	for (int i = action_indice[index - 1]; i < action_indice[index]; i++)
-	{
-		if (actions[i] == tmp)
-		{
-			continue;
-		}
-		tmp = actions[i];
-		_actions.push_back((int)tmp);
-	}*/
+	int index = ((is_player && player == BLACK) || (!is_player && player == WHITE) ? 0 : 5) + gomoku_type;
 	IVEC _actions(actions + action_indice[index - 1], actions + action_indice[index]);
 	return _actions;
 }
@@ -202,6 +199,7 @@ void print_board(FastBoard &board)
 	IVEC _board = board.get_board();
 	for (int i = 0; i < BOARD_SIZE; i++)
 	{
+		printf("%2d ", i);
 		for (int j = 0; j < BOARD_SIZE; j++)
 		{
 			if (_board[i*BOARD_SIZE + j] == EMPTY)
@@ -216,6 +214,31 @@ void print_board(FastBoard &board)
 		}
 		std::cout << std::endl;
 	}
+	printf("   ");
+	for (int i = 0; i < BOARD_SIZE; i++)
+	{
+		if (i < 10)
+		{
+			printf("%d ", i);
+		}
+		else
+		{
+			printf("1 ");
+		}
+	}
+	printf("\n   ");
+	for (int i = 0; i < BOARD_SIZE; i++)
+	{
+		if (i < 10)
+		{
+			printf("  ");
+		}
+		else
+		{
+			printf("%d ", i - 10);
+		}
+	}
+	printf("\n");
 }
 
 void print_potential_actions(FastBoard &board)
@@ -225,7 +248,9 @@ void print_potential_actions(FastBoard &board)
 		std::cout << "is player: " << is_player << std::endl;
 		for (int gt = OPEN_FOUR; gt <= OPEN_TWO; gt++)
 		{
+
 			IVEC potential_actions = board.get_actions((bool)is_player, gt);
+
 			if (potential_actions.size() == 0)
 			{
 				continue;
@@ -256,8 +281,11 @@ void main()
 	{
 		board.move(actions[i]);
 		print_board(board);
+
 		std::cout << "player: " << board.player << std::endl;
+
 		print_potential_actions(board);
+
 		std::cout << std::endl;
 	}
 

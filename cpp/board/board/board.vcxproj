@@ -145,12 +145,14 @@
     <ClInclude Include="board.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="action_hash.cpp" />
     <ClCompile Include="board.cpp" />
     <ClCompile Include="board_type.cpp" />
     <ClCompile Include="fastboard.cpp" />
     <ClCompile Include="fastboard_table.cpp" />
     <ClCompile Include="fastboard_type.cpp" />
     <ClCompile Include="fastvct.cpp" />
+    <ClCompile Include="gomoku_type_hash.cpp" />
     <ClCompile Include="vct.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

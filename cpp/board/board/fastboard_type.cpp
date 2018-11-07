@@ -25,7 +25,6 @@ double get_actions_time = 0.0;
 
 #endif // FAST_DEBUG
 
-
 void fast_check(int cache_counts[], int cache_actions[],
 			    int _board[], int action, int color,
 				MOVE move_func, int max_empty_count, int max_delta = 6)
@@ -115,10 +114,11 @@ bool check_fast_five(int _board[], int action, int color, MOVE move_func)
 	}
 }
 
+ActionHash ActionTable = ActionHash();
 int BEGIN;
 
 bool check_fast_open_four_and_four(int _board[], int action, int color, MOVE move_func,
-	bool is_open, bool is_player, int &begin = BEGIN, unsigned char *actions = NULL)
+	bool is_open, bool is_player, int &begin = BEGIN, unsigned char *actions = NULL, int check_gt = -1)
 {
 	#ifdef FAST_DEBUG
 	clock_t start = clock();
@@ -168,7 +168,10 @@ bool check_fast_open_four_and_four(int _board[], int action, int color, MOVE mov
 	{
 		for (IVEC::iterator idx = indice.begin(); idx != indice.end(); idx++)
 		{
-			actions[begin++] = (unsigned char)cache_actions[*idx];
+			if (!ActionTable.check(check_gt, cache_actions[*idx]))
+			{
+				actions[begin++] = (unsigned char)cache_actions[*idx];
+			}
 		}
 	}
 
@@ -187,7 +190,7 @@ bool check_fast_open_four_and_four(int _board[], int action, int color, MOVE mov
 }
 
 bool check_fast_open_three_and_three(int _board[], int action, int color, MOVE move_func,
-	bool is_open, bool is_player, int &begin = BEGIN, unsigned char *actions = NULL)
+	bool is_open, bool is_player, int &begin = BEGIN, unsigned char *actions = NULL, int check_gt = -1)
 {
 	clock_t start = clock();
 
@@ -276,7 +279,10 @@ bool check_fast_open_three_and_three(int _board[], int action, int color, MOVE m
 	{
 		for (IVEC::iterator idx = indice.begin(); idx != indice.end(); idx++)
 		{
-			actions[begin++] = (unsigned char)cache_actions[*idx];
+			if (!ActionTable.check(check_gt, cache_actions[*idx]))
+			{
+				actions[begin++] = (unsigned char)cache_actions[*idx];
+			}
 		}
 	}
 
@@ -295,7 +301,7 @@ bool check_fast_open_three_and_three(int _board[], int action, int color, MOVE m
 }
 
 bool check_fast_open_two(int _board[], int action, int color, MOVE move_func,
-	bool is_open, bool is_player, int &begin =BEGIN, unsigned char *actions = NULL)
+	bool is_open, bool is_player, int &begin =BEGIN, unsigned char *actions = NULL, int check_gt = -1)
 {
 	#ifdef FAST_DEBUG
 	clock_t start = clock();
@@ -388,7 +394,10 @@ bool check_fast_open_two(int _board[], int action, int color, MOVE move_func,
 	{
 		for (IVEC::iterator idx = indice.begin(); idx != indice.end(); idx++)
 		{
-			actions[begin++] = (unsigned char)cache_actions[*idx];
+			if (!ActionTable.check(check_gt, cache_actions[*idx]))
+			{
+				actions[begin++] = (unsigned char)cache_actions[*idx];
+			}
 		}
 	}
 
@@ -407,7 +416,7 @@ bool check_fast_open_two(int _board[], int action, int color, MOVE move_func,
 }
 
 
-typedef bool(*CHECK)(int[], int, int, MOVE, bool, bool, int &, unsigned char *);
+typedef bool(*CHECK)(int[], int, int, MOVE, bool, bool, int &, unsigned char *, int);
 CHECK check_funcs[3] = { check_fast_open_four_and_four, check_fast_open_three_and_three, check_fast_open_two };
 
 
@@ -449,28 +458,32 @@ U64 get_fast_block_zobrisKey(int _board[], int action, int color, int func_idx)
 	return key;
 }
 
+GomokuTypeHash GomokuTypeTable = GomokuTypeHash();
+
 void FastBoard::get_potential_actions()
 {
 	#ifdef FAST_DEBUG
 	clock_t start = clock();
 	#endif
 
-	int opponent = player_mapping(player), action = history[history[0]], act, func_idx, base, player_base, delta;
+	int opponent = player_mapping(player), action = history[history[0]], act, func_idx, base, delta;
 	int begin, end, index_begin, index_end, tmp_index, tmp_gomoku_type_indice[11], rest_nb;
 	static unsigned char tmp_gomoku_types[FASTBOARD_CONTAINER], tmp_gomoku_directions[FASTBOARD_CONTAINER];
 	static unsigned char tmp_types[FASTBOARD_CONTAINER], tmp_directions[FASTBOARD_CONTAINER];
 	static unsigned char rest_actions_for_searching[FASTBOARD_CONTAINER], rest_directions_for_searching[FASTBOARD_CONTAINER];
-	std::unordered_set<U64> block_coding_table;
+	//std::unordered_set<U64> block_coding_table;
 	U64 key, op_gt_key, gt_key;
 
 	memcpy(tmp_gomoku_type_indice, gomoku_type_indice, sizeof(tmp_gomoku_type_indice));
 	memcpy(tmp_gomoku_types, gomoku_types, gomoku_type_indice[10] * sizeof(unsigned char));
 	memcpy(tmp_gomoku_directions, gomoku_directions, gomoku_type_indice[10] * sizeof(unsigned char));
 
+	GomokuTypeTable.reset();
+	ActionTable.reset();
+
 	for (int color = BLACK; color <= WHITE; color++)
 	{
 		base = (color - 1) * 5;
-		player_base = color == player ? 0 : 5;
 
 		for (int op_gt = OPEN_FOUR; op_gt <= OPEN_TWO; op_gt += 2)
 		{
@@ -498,24 +511,26 @@ void FastBoard::get_potential_actions()
 			begin = 0;
 			end = index_end - index_begin + delta;
 			gomoku_type_indice[base + op_gt] = gomoku_type_indice[base + op_gt - 1];
-			action_indice[player_base + op_gt] = action_indice[player_base + op_gt - 1];
+			action_indice[base + op_gt] = action_indice[base + op_gt - 1];
 			rest_nb = 0;
 			for (tmp_index = begin; tmp_index < end; tmp_index++)
 			{
 				act = tmp_types[tmp_index];
 				func_idx = tmp_directions[tmp_index];
 				key = get_fast_block_zobrisKey(_board, (int)act, player, (int)func_idx) ^ op_gt_key;
-				if (block_coding_table.find(key) != block_coding_table.end())
+				/*if (block_coding_table.find(key) != block_coding_table.end())
 				{
-					//rest_actions_for_searching[rest_nb] = act;
-					//rest_directions_for_searching[rest_nb++] = func_idx;
 					continue;
 				}
 				
-				block_coding_table.insert(key);
+				block_coding_table.insert(key);*/
+				if (GomokuTypeTable.in_table(key))
+				{
+					continue;
+				}
 				
 				if (check_funcs[(op_gt - 1) / 2](_board, (int)act, color, move_list[(int)func_idx], 
-					true, color == player, action_indice[player_base + op_gt], actions))
+					true, color == player, action_indice[base + op_gt], actions, base + op_gt))
 				{
 					gomoku_types[gomoku_type_indice[base + op_gt]] = act;
 					gomoku_directions[gomoku_type_indice[base + op_gt]++] = func_idx;
@@ -560,7 +575,7 @@ void FastBoard::get_potential_actions()
 			begin = 0;
 			end = index_end - index_begin + delta +rest_nb;
 			gomoku_type_indice[base + op_gt + 1] = gomoku_type_indice[base + op_gt];
-			action_indice[player_base + op_gt + 1] = action_indice[player_base + op_gt];
+			action_indice[base + op_gt + 1] = action_indice[base + op_gt];
 
 			for (tmp_index = begin; tmp_index < end; tmp_index++)
 			{
@@ -568,20 +583,28 @@ void FastBoard::get_potential_actions()
 				func_idx = tmp_directions[tmp_index];
 				key = get_fast_block_zobrisKey(_board, (int)act, player, (int)func_idx) ^ gt_key;
 
-				if (block_coding_table.find(key) != block_coding_table.end())
+				/*if (block_coding_table.find(key) != block_coding_table.end())
 				{
 					continue;
 				}
-				block_coding_table.insert(key);
+
+				block_coding_table.insert(key);*/
+				if (GomokuTypeTable.in_table(key))
+				{
+					continue;
+				}
+
 				if (check_funcs[(op_gt - 1) / 2](_board, (int)act, color, move_list[(int)func_idx], 
-					false, color == player, action_indice[player_base + op_gt + 1], actions))
+					false, color == player, action_indice[base + op_gt + 1], actions, base + op_gt + 1))
 				{
 					gomoku_types[gomoku_type_indice[base + op_gt + 1]] = act;
 					gomoku_directions[gomoku_type_indice[base + op_gt + 1]++] = func_idx;
 				}
+
 			}
 
 		}
+
 	}
 
 	#ifdef FAST_DEBUG

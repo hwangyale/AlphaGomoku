@@ -23,6 +23,8 @@
 
 #define FASTBOARD_CONTAINER 100
 
+#define GOMOKU_TYPE_CONTAINER 100000
+
 #define CLOCKS_PER_SEC ((clock_t)1000)
 
 typedef unsigned long long U64;
@@ -111,6 +113,32 @@ private:
 	std::unordered_map<U64, FastBoard> board_table;
 	std::vector<U64> keys;
 	void reset();
+};
+
+class ActionHash
+{
+public:
+	bool check(int gt, int action);
+	void reset();
+	ActionHash();
+private:
+	int action_counts[10];
+	int action_stacks[10][STONES+1];
+	bool actions[10][STONES];
+};
+
+class GomokuTypeHash
+{
+public:
+	bool in_table(U64 code);
+	void reset();
+	GomokuTypeHash();
+private:
+	U64 values[FASTBOARD_CONTAINER];
+	int next[FASTBOARD_CONTAINER];
+	int heads[GOMOKU_TYPE_CONTAINER];
+	int head_stack[FASTBOARD_CONTAINER];
+	int hashed_number, pointer, hash;
 };
 
 int fastVct(FastBoard &fastBoard, int max_depth, double max_time);
