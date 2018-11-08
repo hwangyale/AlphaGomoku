@@ -47,5 +47,8 @@
     <ClCompile Include="gomoku_type_hash.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="test_fast_board.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
