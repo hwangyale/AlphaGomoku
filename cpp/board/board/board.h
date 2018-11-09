@@ -21,7 +21,7 @@
 #define OPEN_TWO 5
 #define TWO 6
 
-#define FASTBOARD_CONTAINER 100
+#define FASTBOARD_CONTAINER 225
 
 #define GOMOKU_TYPE_CONTAINER 100000
 
@@ -118,13 +118,13 @@ private:
 class ActionHash
 {
 public:
-	bool check(int gt, int action);
+	bool check(int gt, int action, int color);
 	void reset();
 	ActionHash();
 private:
-	int action_counts[10];
-	int action_stacks[10][STONES+1];
-	bool actions[10][STONES];
+	int action_counts[2][5];
+	int action_stacks[2][5][STONES+1];
+	bool actions[2][5][STONES];
 };
 
 class GomokuTypeHash

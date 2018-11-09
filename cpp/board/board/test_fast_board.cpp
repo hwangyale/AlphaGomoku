@@ -46,22 +46,31 @@ int main()
 	srand(seed);
 	for (t = 0; t < test_times; t++)
 	{
-		std::cout << t << std::endl;
+		//std::cout << t << std::endl;
 		fast_board = FastBoard();
-		//board = Board();
 		actionGenerator = ActionGenerator();
 		while (!fast_board.is_over)
 		{
 			count += 1.0;
-			fast_board.move(actionGenerator.get_action(), false);
+			fast_board.move(actionGenerator.get_action(), true);
 		}
-		/*while (!board.is_over)
+	}
+	printf("average FastBoard move time: %.04f\n", (double)((clock() - start)) / count);
+
+	start = clock();
+	srand(seed);
+	for (t = 0; t < test_times; t++)
+	{
+		//std::cout << t << std::endl;
+		board = Board();
+		actionGenerator = ActionGenerator();
+		while (!board.is_over)
 		{
 			count += 1.0;
 			board.move(actionGenerator.get_action());
-		}*/
+		}
 	}
-	printf("average move time: %.04f\n", (double)((clock() - start)) / count);
+	printf("average Board move time: %.04f\n", (double)((clock() - start)) / count);
 	getchar();
 	return 0;
 }

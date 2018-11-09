@@ -14,22 +14,12 @@ FastBoardTable FASTBOARDTABLE = FastBoardTable();
 
 void FastBoard::reset()
 {
-	int i;
-	/*for (i = 0; i < STONES; i++)
-	{
-		_board[i] = EMPTY;
-	}*/
 	memset(_board, 0, sizeof(_board));
 	zobristKey = 0;
 	player = BLACK;
 	history[0] = 0;
 	is_over = false;
 	winner = -1;
-	/*for (i = 0; i < 11; i++)
-	{
-		gomoku_type_indice[i] = 0;
-		action_indice[i] = 0;
-	}*/
 	memset(gomoku_type_indice, 0, sizeof(gomoku_type_indice));
 	memset(action_indice, 0, sizeof(action_indice));
 }
@@ -82,40 +72,13 @@ FastBoard::FastBoard(const FastBoard &copyFastBoard)
 	clock_t start = clock();
 	#endif // FAST_DEBUG
 
-	int i;
-
 	player = copyFastBoard.player;
 	step = copyFastBoard.step;
 	is_over = copyFastBoard.is_over;
 	winner = copyFastBoard.winner;
-	/*for (i = 0; i <= copyFastBoard.history[0]; i++)
-	{
-		history[i] = copyFastBoard.history[i];
-	}*/
 	memcpy(history, copyFastBoard.history, (copyFastBoard.history[0] + 1) * sizeof(int));
 	zobristKey = copyFastBoard.zobristKey;
-	/*for (i = 0; i < STONES; i++)
-	{
-		_board[i] = copyFastBoard._board[i];
-	}*/
 	memcpy(_board, copyFastBoard._board, sizeof(_board));
-
-	/*for (i = 0; i < 11; i++)
-	{
-		gomoku_type_indice[i] = copyFastBoard.gomoku_type_indice[i];
-		action_indice[i] = copyFastBoard.action_indice[i];
-	}
-
-	for (i = 0; i < copyFastBoard.gomoku_type_indice[10]; i++)
-	{
-		gomoku_types[i] = copyFastBoard.gomoku_types[i];
-		gomoku_directions[i] = copyFastBoard.gomoku_directions[i];
-	}
-
-	for (i = 0; i < copyFastBoard.action_indice[10]; i++)
-	{
-		actions[i] = copyFastBoard.actions[i];
-	}*/
 
 	memcpy(gomoku_type_indice, copyFastBoard.gomoku_type_indice, sizeof(gomoku_type_indice));
 	if (gomoku_type_indice[10] > 0)
