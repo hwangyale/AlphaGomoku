@@ -448,7 +448,9 @@ U64 get_fast_block_zobrisKey(int _board[], int action, int color, int func_idx)
 	{
 		for (int delta = 1; delta < 6; delta++)
 		{
+			//std::cout << "func_idx: " << func_idx << " action: " << action << std::endl;
 			tmp_action = move_func(action, sign*delta);
+			//std::cout << "tmp_action: " << tmp_action << std::endl;
 			if (tmp_action >= 0 && _board[tmp_action] == color)
 			{
 				key ^= FAST_ZOBRIST_TABLE[tmp_action + (color == BLACK ? 0 : STONES)];

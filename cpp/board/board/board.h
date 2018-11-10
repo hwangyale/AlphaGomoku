@@ -88,6 +88,9 @@ public:
 	IVEC get_board();
 
 	IVEC get_actions(bool is_player, int gomoku_type);
+	int count_actions(bool is_player, int gomoku_type);
+	void get_fast_actions(bool is_player, int gomoku_type, int container[], int &count);
+	bool check_action(bool is_player, int gomoku_type, int action);
 
 private:
 	int _board[BOARD_SIZE*BOARD_SIZE];

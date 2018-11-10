@@ -84,6 +84,7 @@ FastBoard::FastBoard(const FastBoard &copyFastBoard)
 	if (gomoku_type_indice[10] > 0)
 	{
 		memcpy(gomoku_types, copyFastBoard.gomoku_types, gomoku_type_indice[10] * sizeof(unsigned char));
+		memcpy(gomoku_directions, copyFastBoard.gomoku_directions, gomoku_type_indice[10] * sizeof(unsigned char));
 	}
 
 	memcpy(action_indice, copyFastBoard.action_indice, sizeof(action_indice));
@@ -166,6 +167,37 @@ IVEC FastBoard::get_actions(bool is_player, int gomoku_type)
 	int index = ((is_player && player == BLACK) || (!is_player && player == WHITE) ? 0 : 5) + gomoku_type;
 	IVEC _actions(actions + action_indice[index - 1], actions + action_indice[index]);
 	return _actions;
+}
+
+int FastBoard::count_actions(bool is_player, int gomoku_type)
+{
+	int index = ((is_player && player == BLACK) || (!is_player && player == WHITE) ? 0 : 5) + gomoku_type;
+	return action_indice[index] - action_indice[index - 1];
+}
+
+void FastBoard::get_fast_actions(bool is_player, int gomoku_type, int container[], int &count)
+{
+	int index = ((is_player && player == BLACK) || (!is_player && player == WHITE) ? 0 : 5) + gomoku_type;
+	int end = action_indice[index];
+	for (int i = action_indice[index - 1]; i < end; i++)
+	{
+		container[++count] = (int)actions[i];
+	}
+}
+
+bool FastBoard::check_action(bool is_player, int gomoku_type, int action)
+{
+	unsigned char act = (unsigned char)action;
+	int index = ((is_player && player == BLACK) || (!is_player && player == WHITE) ? 0 : 5) + gomoku_type;
+	int end = action_indice[index];
+	for (int i = action_indice[index - 1]; i < end; i++)
+	{
+		if (actions[i] == act)
+		{
+			return true;
+		}
+	}
+	return false;
 }
 
 IVEC FastBoard::get_history()
@@ -280,18 +312,20 @@ void main()
 	for (int i = 0; i < 16; i++)
 	{
 		board.move(actions[i]);
-		print_board(board);
+		/*print_board(board);
 
 		std::cout << "player: " << board.player << std::endl;
 
 		print_potential_actions(board);
 
-		std::cout << std::endl;
+		std::cout << std::endl;*/
 	}
 
-	
+	print_board(board);
 
-	/*clock_t start = clock();
+	std::cout << "player: " << board.player << std::endl;
+
+	clock_t start = clock();
 
 	move_time = copy_time = 0.0;
 	extern double check_time, five_time, four_time, three_time, two_time, get_actions_time;
@@ -299,7 +333,7 @@ void main()
 	check_time = five_time = four_time = three_time = two_time = get_actions_time = 0.0;
 	set_proof_and_disproof_time = evaluate_time = 0.0;
 
-	std::cout << vct(board, 100, 100.0) << std::endl;
+	std::cout << fastVct(board, 100, 100.0) << std::endl;
 
 	std::cout << "total time: " << (double)(clock() - start) / CLOCKS_PER_SEC << std::endl;
 	std::cout << "check time: " << check_time << std::endl;
@@ -311,7 +345,7 @@ void main()
 	std::cout << "get_actions time: " << get_actions_time << std::endl;
 	std::cout << "copy time: " << copy_time << std::endl;
 	std::cout << "set proof and disproof time: " << set_proof_and_disproof_time << std::endl;
-	std::cout << "evaluate time: " << evaluate_time << std::endl;*/
+	std::cout << "evaluate time: " << evaluate_time << std::endl;
 	getchar();
 }
 
