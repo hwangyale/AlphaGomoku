@@ -81,19 +81,19 @@ class Board(CPPBoard):
     def get_potential_actions(self, defend=None,
                               attack_vct_depth=None, attack_vct_time=None,
                               defend_vct_depth=None, defend_vct_time=None):
-        actions = self.get_positions(True, OPEN_FOUR) + self.get_positions(True, FOUR)
+        actions = self.get_actions(True, OPEN_FOUR) + self.get_actions(True, FOUR)
         if len(actions):
             return list(set(actions))
 
-        actions = self.get_positions(False, OPEN_FOUR) + self.get_positions(False, FOUR)
+        actions = self.get_actions(False, OPEN_FOUR) + self.get_actions(False, FOUR)
         if len(actions):
             return list(set(actions))
 
-        actions = self.get_positions(True, OPEN_THREE)
+        actions = self.get_actions(True, OPEN_THREE)
         if len(actions):
             return actions
 
-        actions = self.get_positions(False, OPEN_THREE)
+        actions = self.get_actions(False, OPEN_THREE)
         if len(actions):
             return actions
 

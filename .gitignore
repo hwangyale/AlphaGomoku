@@ -138,3 +138,6 @@ venv.bak/
 
 # do not ignore
 !_board.cp35-win_amd64.pyd
+
+# igore backup
+__backup__

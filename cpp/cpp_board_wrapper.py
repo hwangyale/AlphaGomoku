@@ -3,18 +3,20 @@ from ..common import *
 from .swig_board import board as cppBoard
 
 class CPPBoard(object):
-    def __init__(self, initialize=True):
+    def __init__(self, initialize=True, history=[]):
         if initialize:
-            self.cpp_board = cppBoard.Board()
+            self.cpp_board = cppBoard.FastBoard()
+            for action in history:
+                self.move(action)
 
     def move(self, action):
-        self.cpp_board.move(flatten(action))
+        self.cpp_board.move(flatten(action), False)
 
-    def get_positions(self, is_player, gomoku_type):
-        return [unflatten(act) for act in self.cpp_board.get_positions(is_player, gomoku_type)]
+    def get_actions(self, is_player, gomoku_type):
+        return [unflatten(act) for act in self.cpp_board.get_actions(is_player, gomoku_type)]
 
     def vct(self, max_depth=20, max_time=1):
-        action = cppBoard.vct(self.cpp_board, max_depth, max_time)
+        action = cppBoard.fastVct(self.cpp_board, max_depth, max_time)
         if action < 0:
             return None
         return unflatten(action)
@@ -41,7 +43,7 @@ class CPPBoard(object):
 
     @property
     def history(self):
-        history = self.cpp_board.history
+        history = self.cpp_board.get_history()
         return [unflatten(history[i]) for i in range(self.step)]
 
     @property
@@ -57,13 +59,18 @@ class CPPBoard(object):
 
     def copy(self):
         new_board = CPPBoard(False)
-        new_board.cpp_board = cppBoard.Board(self.cpp_board)
+        new_board.cpp_board = cppBoard.FastBoard(self.cpp_board)
         return new_board
 
     def __str__(self):
         board = self.get_board()
         board_string = ''
-        for row in board:
-            s = ' '.join([str(col) for col in row])
+        for i, row in enumerate(board):
+            s = '{:2d} '.format(i)
+            s += ' '.join([str(col) if col != EMPTY else '_' for col in row])
             board_string += s + '\n'
-        return board_string.replace('0', '_')
+        board_string += ' ' * 3
+        board_string += ' '.join([str(i) if i < 10 else '1' for i in range(BOARD_SIZE)]) + '\n'
+        board_string += ' ' * 3
+        board_string += ' '.join([' ' if i < 10 else str(i-10) for i in range(BOARD_SIZE)]) + '\n'
+        return board_string

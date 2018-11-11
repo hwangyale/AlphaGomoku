@@ -1,4 +1,4 @@
-import AlphaGomoku.cpp.board as cpp_board
+from AlphaGomoku.cpp import CPPBoard
 
 # board = cpp_board.Board(cpp_board.IntVector([112, 97, 127]))
 
@@ -8,8 +8,37 @@ record = [
     (8, 6), (9, 6), (8, 7), (8, 5)
 ]
 
-history = [r*15+c for r, c in record]
-board = cpp_board.Board(cpp_board.IntVector(history))
+# record += [
+#     (8, 8), (9, 9), (8, 9), (8, 10), (5, 3), (5, 4),
+#     (7, 5), (6, 4), (7, 4), (7, 3), (4, 8)
+# ]
 
-print(board.get_positions(False, 6))
-print(cpp_board.vct(board, 100, 100))
+board = CPPBoard(history=record)
+# print(board)
+# print('player: {}'.format(board.player))
+# for is_player in [True, False]:
+#     print('is player: {}'.format(is_player))
+#     for gt in range(1, 6):
+#         actions = board.get_actions(is_player, gt)
+#         if len(actions) != 0:
+#             print('gomoku type: {}'.format(gt))
+#             print(actions)
+step = 0
+while not board.is_over:
+    step += 1
+    if step % 2 == 1:
+        action = board.vct(12, 100)
+    else:
+        print(board)
+        print('player: {}'.format(board.player))
+        for is_player in [True, False]:
+            print('is player: {}'.format(is_player))
+            for gt in range(1, 6):
+                actions = board.get_actions(is_player, gt)
+                if len(actions) != 0:
+                    print('gomoku type: {}'.format(gt))
+                    print(actions)
+        # input('any input to continue')
+        action = tuple([int(x) for x in input('action:\n').split()])
+    board.move(action)
+    print('move: {}'.format(action))

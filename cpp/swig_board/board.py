@@ -284,81 +284,75 @@ OPEN_THREE = _board.OPEN_THREE
 THREE = _board.THREE
 OPEN_TWO = _board.OPEN_TWO
 TWO = _board.TWO
-class Board(_object):
+FASTBOARD_CONTAINER = _board.FASTBOARD_CONTAINER
+GOMOKU_TYPE_CONTAINER = _board.GOMOKU_TYPE_CONTAINER
+class FastBoard(_object):
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, Board, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(self, FastBoard, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, Board, name)
+    __getattr__ = lambda self, name: _swig_getattr(self, FastBoard, name)
     __repr__ = _swig_repr
-    __swig_setmethods__["player"] = _board.Board_player_set
-    __swig_getmethods__["player"] = _board.Board_player_get
+    __swig_setmethods__["player"] = _board.FastBoard_player_set
+    __swig_getmethods__["player"] = _board.FastBoard_player_get
     if _newclass:
-        player = _swig_property(_board.Board_player_get, _board.Board_player_set)
-    __swig_setmethods__["step"] = _board.Board_step_set
-    __swig_getmethods__["step"] = _board.Board_step_get
+        player = _swig_property(_board.FastBoard_player_get, _board.FastBoard_player_set)
+    __swig_setmethods__["step"] = _board.FastBoard_step_set
+    __swig_getmethods__["step"] = _board.FastBoard_step_get
     if _newclass:
-        step = _swig_property(_board.Board_step_get, _board.Board_step_set)
-    __swig_setmethods__["is_over"] = _board.Board_is_over_set
-    __swig_getmethods__["is_over"] = _board.Board_is_over_get
+        step = _swig_property(_board.FastBoard_step_get, _board.FastBoard_step_set)
+    __swig_setmethods__["is_over"] = _board.FastBoard_is_over_set
+    __swig_getmethods__["is_over"] = _board.FastBoard_is_over_get
     if _newclass:
-        is_over = _swig_property(_board.Board_is_over_get, _board.Board_is_over_set)
-    __swig_setmethods__["winner"] = _board.Board_winner_set
-    __swig_getmethods__["winner"] = _board.Board_winner_get
+        is_over = _swig_property(_board.FastBoard_is_over_get, _board.FastBoard_is_over_set)
+    __swig_setmethods__["winner"] = _board.FastBoard_winner_set
+    __swig_getmethods__["winner"] = _board.FastBoard_winner_get
     if _newclass:
-        winner = _swig_property(_board.Board_winner_get, _board.Board_winner_set)
-    __swig_setmethods__["history"] = _board.Board_history_set
-    __swig_getmethods__["history"] = _board.Board_history_get
+        winner = _swig_property(_board.FastBoard_winner_get, _board.FastBoard_winner_set)
+    __swig_setmethods__["history"] = _board.FastBoard_history_set
+    __swig_getmethods__["history"] = _board.FastBoard_history_get
     if _newclass:
-        history = _swig_property(_board.Board_history_get, _board.Board_history_set)
-    __swig_setmethods__["zobristKey"] = _board.Board_zobristKey_set
-    __swig_getmethods__["zobristKey"] = _board.Board_zobristKey_get
+        history = _swig_property(_board.FastBoard_history_get, _board.FastBoard_history_set)
+    __swig_setmethods__["zobristKey"] = _board.FastBoard_zobristKey_set
+    __swig_getmethods__["zobristKey"] = _board.FastBoard_zobristKey_get
     if _newclass:
-        zobristKey = _swig_property(_board.Board_zobristKey_get, _board.Board_zobristKey_set)
-    __swig_setmethods__["zobrist"] = _board.Board_zobrist_set
-    __swig_getmethods__["zobrist"] = _board.Board_zobrist_get
-    if _newclass:
-        zobrist = _swig_property(_board.Board_zobrist_get, _board.Board_zobrist_set)
-    if _newclass:
-        initZobrist = staticmethod(_board.Board_initZobrist)
-    else:
-        initZobrist = _board.Board_initZobrist
+        zobristKey = _swig_property(_board.FastBoard_zobristKey_get, _board.FastBoard_zobristKey_set)
 
     def __init__(self, *args):
-        this = _board.new_Board(*args)
+        this = _board.new_FastBoard(*args)
         try:
             self.this.append(this)
         except __builtin__.Exception:
             self.this = this
 
-    def move(self, pos, check_two=True):
-        return _board.Board_move(self, pos, check_two)
+    def move(self, action, check=True):
+        return _board.FastBoard_move(self, action, check)
+
+    def get_history(self):
+        return _board.FastBoard_get_history(self)
 
     def get_board(self):
-        return _board.Board_get_board(self)
+        return _board.FastBoard_get_board(self)
 
-    def get_positions(self, is_player, gomoku_type):
-        return _board.Board_get_positions(self, is_player, gomoku_type)
+    def get_actions(self, is_player, gomoku_type):
+        return _board.FastBoard_get_actions(self, is_player, gomoku_type)
 
-    def _get_positions(self, is_player, gomoku_type):
-        return _board.Board__get_positions(self, is_player, gomoku_type)
-    __swig_destroy__ = _board.delete_Board
+    def count_actions(self, is_player, gomoku_type):
+        return _board.FastBoard_count_actions(self, is_player, gomoku_type)
+
+    def get_fast_actions(self, is_player, gomoku_type, container, count, begin_index=0):
+        return _board.FastBoard_get_fast_actions(self, is_player, gomoku_type, container, count, begin_index)
+
+    def check_action(self, is_player, gomoku_type, action):
+        return _board.FastBoard_check_action(self, is_player, gomoku_type, action)
+    __swig_destroy__ = _board.delete_FastBoard
     __del__ = lambda self: None
-Board_swigregister = _board.Board_swigregister
-Board_swigregister(Board)
-cvar = _board.cvar
-
-def Board_initZobrist():
-    return _board.Board_initZobrist()
-Board_initZobrist = _board.Board_initZobrist
+FastBoard_swigregister = _board.FastBoard_swigregister
+FastBoard_swigregister(FastBoard)
 
 
-def get_elements(set):
-    return _board.get_elements(set)
-get_elements = _board.get_elements
-
-def vct(board, max_depth, max_time):
-    return _board.vct(board, max_depth, max_time)
-vct = _board.vct
+def fastVct(fastBoard, max_depth, max_time):
+    return _board.fastVct(fastBoard, max_depth, max_time)
+fastVct = _board.fastVct
 # This file is compatible with both classic and new-style classes.
 
 
