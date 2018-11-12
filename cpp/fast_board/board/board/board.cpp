@@ -199,6 +199,40 @@ FastBoard::FastBoard(const FastBoard &copyFastBoard)
 
 }
 
+//FastBoard &FastBoard::operator = (const FastBoard &copyFastBoard)
+//{
+//	#if FAST_DEBUG
+//	clock_t start = clock();
+//	#endif // FAST_DEBUG
+//
+//	player = copyFastBoard.player;
+//	step = copyFastBoard.step;
+//	is_over = copyFastBoard.is_over;
+//	winner = copyFastBoard.winner;
+//	memcpy(history, copyFastBoard.history, (copyFastBoard.history[0] + 1) * sizeof(int));
+//	zobristKey = copyFastBoard.zobristKey;
+//	memcpy(_board, copyFastBoard._board, sizeof(_board));
+//
+//	memcpy(gomoku_type_indice, copyFastBoard.gomoku_type_indice, sizeof(gomoku_type_indice));
+//	if (gomoku_type_indice[10] > 0)
+//	{
+//		memcpy(gomoku_types, copyFastBoard.gomoku_types, gomoku_type_indice[10] * sizeof(unsigned char));
+//		memcpy(gomoku_directions, copyFastBoard.gomoku_directions, gomoku_type_indice[10] * sizeof(unsigned char));
+//	}
+//
+//	memcpy(action_indice, copyFastBoard.action_indice, sizeof(action_indice));
+//	if (action_indice[10] > 0)
+//	{
+//		memcpy(actions, copyFastBoard.actions, action_indice[10] * sizeof(unsigned char));
+//	}
+//
+//	#ifdef FAST_DEBUG
+//	copy_time += (double)(clock() - start) / CLOCKS_PER_SEC;
+//	#endif // FAST_DEBUG
+//
+//	return *this;
+//}
+
 #ifdef FAST_DEBUG
 
 double move_time = 0.0;

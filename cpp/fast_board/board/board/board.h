@@ -46,6 +46,7 @@ public:
 	FastBoard();
 	FastBoard(IVEC history, bool check = true);
 	FastBoard(const FastBoard &copyFastBoard);
+	//FastBoard & operator = (const FastBoard &copyFastBoard);
 
 	void move(int action, bool check = true);
 	IVEC get_history();
