@@ -56,7 +56,7 @@ void Table::init_Masks()
 			for (k = j - (RANGE - 1) / 2; k <= j + (RANGE - 1) / 2; k++)
 			{
 				if (i < HALF_SIZE && (k < 0 || k > i)) continue;
-				if (i >= HALF_SIZE && (k < i - HALF_SIZE || k >= BOARD_SIZE)) continue;
+				if (i >= HALF_SIZE && (k < BOARD_SIZE - i - 1 || k >= BOARD_SIZE)) continue;
 				Masks[2][i][j].set(2 * k);
 				Masks[2][i][j].set(2 * k + 1);
 			}
@@ -70,7 +70,7 @@ void Table::init_Masks()
 			for (k = j - (RANGE - 1) / 2; k <= j + (RANGE - 1) / 2; k++)
 			{
 				if (i < HALF_SIZE && (k < 0 || k > i)) continue;
-				if (i >= HALF_SIZE && (k < i - HALF_SIZE || k >= BOARD_SIZE)) continue;
+				if (i >= HALF_SIZE && (k < BOARD_SIZE - i - 1 || k >= BOARD_SIZE)) continue;
 				Masks[3][i][j].set(2 * k);
 				Masks[3][i][j].set(2 * k + 1);
 			}
@@ -89,27 +89,43 @@ GBIT &Table::get_mask(UC action, UC direction)
 	{
 		if (row == col)
 		{
-			return Masks[2][HALF_SIZE][row];
+			return Masks[2][BOARD_SIZE - 1][row];
 		}
 
 		int i, j;
 		if (row < col)
 		{
-			i = (row + HALF_SIZE < col) ? BOARD_SIZE + row - col - 1 : HALF_SIZE + col - row;
-			j = i < HALF_SIZE ? row : (i - HALF_SIZE) + row;
+			i = BOARD_SIZE + row - col - 1;
+			j = i < HALF_SIZE ? row : (BOARD_SIZE - i) + row;
 			return Masks[2][i][j];
 		}
 		else
 		{
-			i = (col + HALF_SIZE < row) ? BOARD_SIZE + col - row - 1 : HALF_SIZE + row - col;
-			j = i < HALF_SIZE ? col : (i - HALF_SIZE) + col;
+			i = BOARD_SIZE + col - row - 1;
+			j = i < HALF_SIZE ? col : (BOARD_SIZE - i) + col;
 			return Masks[2][i][j];
 		}
-		
 	}
 	else
 	{
+		if (row == BOARD_SIZE - col - 1)
+		{
+			return Masks[2][BOARD_SIZE - 1][row];
+		}
 
+		int i, j;
+		if (row < BOARD_SIZE - col - 1)
+		{
+			i = row + col;
+			j = i < HALF_SIZE ? row : (BOARD_SIZE - i) + row;
+			return Masks[2][i][j];
+		}
+		else
+		{
+			i = 2 * BOARD_SIZE - col - row - 2;
+			j = i < HALF_SIZE ? BOARD_SIZE - col - 1 : (BOARD_SIZE - i) + BOARD_SIZE - col - 1;
+			return Masks[2][i][j];
+		}
 	}
 }
 

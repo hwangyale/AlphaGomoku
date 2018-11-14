@@ -18,6 +18,9 @@
 #define WHITE 2
 #define DRAW 3
 
+#define BITBLACK 0
+#define BITWHITE 1
+
 #define OPEN_FOUR 1
 #define FOUR 2
 #define OPEN_THREE 3
@@ -26,11 +29,14 @@
 
 #define GOMOKU_TYPE_CONTAINER 225
 #define ACTION_CONTAINER 225
+#define RANGE 9
+#define GOMOKU_TABLE_CONTAINER 300000
 //#define GOMOKU_TYPE_CONTAINER 100000
 
 #define CLOCKS_PER_SEC ((clock_t)1000)
 
 typedef unsigned long long U64;
+typedef unsigned long U32;
 typedef int(*MOVE)(int, int);
 typedef std::unordered_set<int> ISET;
 typedef std::vector<int> IVEC;
@@ -53,10 +59,25 @@ public:
 	GBIT &get_mask(UC action, UC direction);
 
 private:
-	static const int RANGE = 9;
 	void init_BitBoard();
 	void init_ZobristTable();
 	void init_Masks();
+};
+
+class GomokuTypeTable
+{
+public:
+	bool get_actions(bool is_player, int gomoku_type, GBIT masked_line, UC container[], int begin, int &count);
+	GomokuTypeTable();
+private:
+	static U64 gomoku_table[GOMOKU_TABLE_CONTAINER];
+	bool load();
+	bool save();
+
+	bool get_four_actions();
+	bool get_three_actions();
+	bool get_two_actions();
+
 };
 
 class BitBoard
@@ -86,9 +107,11 @@ private:
 	UC history[STONES + 1];
 	int gomoku_indice[11];
 	int action_indice[11];
+	bool allocated;
 	std::bitset<2 * BOARD_SIZE> bitboards[4][BOARD_SIZE];
 
 	void allocate();
+	void release();
 	void reset();
 	void copy(const BitBoard &copy_board);
 	void check_gomoku_type();

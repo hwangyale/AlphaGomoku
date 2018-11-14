@@ -11,25 +11,38 @@ extern Table TABLE;
 
 void BitBoard::allocate()
 {
-	int shared_index;
-	if (SHARED_INDEX_HEAD != SHARED_INDEX_TAIL)
+	if (!allocated)
 	{
-		shared_index = SHARED_INDEX_QUEUE[SHARED_INDEX_HEAD];
-		SHARED_INDEX_HEAD = (SHARED_INDEX_HEAD + 1) % MAX_BOARD;
+		int shared_index;
+		if (SHARED_INDEX_HEAD != SHARED_INDEX_TAIL)
+		{
+			shared_index = SHARED_INDEX_QUEUE[SHARED_INDEX_HEAD];
+			SHARED_INDEX_HEAD = (SHARED_INDEX_HEAD + 1) % MAX_BOARD;
+		}
+		else
+		{
+			shared_index = SHARED_INDEX;
+			SHARED_INDEX++;
+		}
+		gomoku_indice[0] = shared_index * GOMOKU_TYPE_CONTAINER;
+		action_indice[0] = shared_index * ACTION_CONTAINER;
+		allocated = true;
 	}
-	else
+}
+
+void BitBoard::release()
+{
+	if (allocated)
 	{
-		shared_index = SHARED_INDEX;
-		SHARED_INDEX++;
+		SHARED_INDEX_QUEUE[SHARED_INDEX_TAIL] = gomoku_indice[0] / GOMOKU_TYPE_CONTAINER;
+		SHARED_INDEX_TAIL = (SHARED_INDEX_TAIL + 1) % MAX_BOARD;
+		allocated = false;
 	}
-	gomoku_indice[0] = shared_index * GOMOKU_TYPE_CONTAINER;
-	action_indice[0] = shared_index * ACTION_CONTAINER;
 }
 
 BitBoard::~BitBoard()
 {
-	SHARED_INDEX_QUEUE[SHARED_INDEX_TAIL] = gomoku_indice[0] / GOMOKU_TYPE_CONTAINER;
-	SHARED_INDEX_TAIL = (SHARED_INDEX_TAIL + 1) % MAX_BOARD;
+	release();
 }
 
 void BitBoard::reset()
@@ -84,6 +97,7 @@ BitBoard::BitBoard(IVEC _history)
 
 void BitBoard::copy(const BitBoard &copyboard)
 {
+	allocate();
 	int i, j;
 	player = copyboard.player;
 	step = copyboard.step;
@@ -136,7 +150,7 @@ BitBoard &BitBoard::operator = (const BitBoard &copyboard)
 
 void BitBoard::move(UC action)
 {
-	bool flag = false;
+	/*bool flag = false;
 	for (int func_idx = 0; func_idx < 4; func_idx++)
 	{
 		if (check_fast_five(_board, action, player, move_list[func_idx]))
@@ -162,7 +176,7 @@ void BitBoard::move(UC action)
 	history[++history[0]] = action;
 	zobristKey ^= zobrist[2 * action + (player == BLACK ? 0 : 1)];
 	player = player == BLACK ? WHITE : BLACK;
-	check_gomoku_type();
+	check_gomoku_type();*/
 }
 
 #ifdef DEBUG
