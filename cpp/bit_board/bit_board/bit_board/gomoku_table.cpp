@@ -172,16 +172,6 @@ bool check_five(GBIT &line, int center, int color)
 	}
 }
 
-bool get_four_actions()
-{
-
-}
-
-bool get_three_actions()
-{
-
-}
-
 inline void move(GBIT &line, int action, int color)
 {
 	line.set(2 * action);
@@ -196,8 +186,8 @@ inline void undo(GBIT &line, int action)
 
 int INSTRUCMENT_COUNT;
 
-bool get_two_actions(GBIT &line, int center, int color, bool is_open, bool is_player, 
-	                 UC container[RANGE + 1] = NULL, int begin = 0, int &count = INSTRUCMENT_COUNT)
+bool get_four_actions(GBIT &line, int center, int color, bool is_open, bool is_player,
+					  UC container[RANGE + 1] = NULL, int begin = 0, int &count = INSTRUCMENT_COUNT)
 {
 	int index, max_empty_count = 3, cache_action, gomoku_type = is_open ? OPEN_FOUR : FOUR;
 	static int cache_counts[RANGE], cache_actions[RANGE];
@@ -257,6 +247,18 @@ bool get_two_actions(GBIT &line, int center, int color, bool is_open, bool is_pl
 
 	cache_hash(key, hash_value);
 	return (bool)hash_value;
+}
+
+bool get_three_actions(GBIT &line, int center, int color, bool is_open, bool is_player,
+				       UC container[RANGE + 1] = NULL, int begin = 0, int &count = INSTRUCMENT_COUNT)
+{
+
+}
+
+bool get_two_actions(GBIT &line, int center, int color, bool is_open, bool is_player, 
+	                 UC container[RANGE + 1] = NULL, int begin = 0, int &count = INSTRUCMENT_COUNT)
+{
+	
 }
 
 
