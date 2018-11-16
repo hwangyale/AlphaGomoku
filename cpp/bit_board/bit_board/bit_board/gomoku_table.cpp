@@ -1,15 +1,14 @@
 #include "bit_board.h"
 #define HASH_CONTAINER 300000
+#define GOMOKU_TYPE_HASH_TABLE_CONTAINER 500000
 
-bool GomokuTypeTable::load()
-{
-	int todo;
-}
-
-bool GomokuTypeTable::save()
-{
-	int todo;
-}
+int HASH_TABLE[2][5][GOMOKU_TYPE_HASH_TABLE_CONTAINER];
+U64 KEY_TABLE[2][5][GOMOKU_TYPE_HASH_TABLE_CONTAINER];
+int HEAD_TABLE[2][5][GOMOKU_TYPE_HASH_TABLE_CONTAINER];
+int HEAD_NEXT_TABLE[2][5][GOMOKU_TYPE_HASH_TABLE_CONTAINER];
+int ACTION_TABLE[2][5][GOMOKU_TYPE_HASH_TABLE_CONTAINER * 4];
+int ACTION_NEXT_TABLE[2][5][GOMOKU_TYPE_HASH_TABLE_CONTAINER * 4];
+int gomoku_pointers[2][5], action_pointers[2][5], hash_counts[2][5];
 
 void check(int cache_counts[RANGE], int cache_actions[RANGE], GBIT &line, int max_empty_count, int center, int color)
 {
@@ -126,9 +125,9 @@ U64 get_key(int gomoku_type, bool is_player, int cache_counts[RANGE], int cache_
 	return key;
 }
 
-int INSTRUCMENT_VALUE;
+int INSTRintMENT_VALUE;
 
-int cache_hash(U64 key, int &value = INSTRUCMENT_VALUE)
+int cache_hash(U64 key, int &value = INSTRintMENT_VALUE)
 {
 	static int hash_table[HASH_CONTAINER] = { 0 };
 	static U64 key_table[HASH_CONTAINER];
@@ -145,7 +144,7 @@ int cache_hash(U64 key, int &value = INSTRUCMENT_VALUE)
 		}
 	}
 
-	if (&value == &INSTRUCMENT_VALUE)
+	if (&value == &INSTRintMENT_VALUE)
 	{
 		return -1;
 	}
@@ -187,11 +186,11 @@ inline void undo(GBIT &line, int action)
 int INSTRUCMENT_COUNT;
 
 bool get_four_actions(GBIT &line, int center, int color, bool is_open, bool is_player,
-					  UC container[RANGE + 1] = NULL, int begin = 0, int &count = INSTRUCMENT_COUNT)
+					  int container[RANGE + 1] = NULL, int begin = 0, int &count = INSTRUCMENT_COUNT)
 {
 	int index, max_empty_count = 3, cache_action, gomoku_type = is_open ? OPEN_FOUR : FOUR;
 	static int cache_counts[RANGE], cache_actions[RANGE];
-	static UC actions[BOARD_SIZE + 1];
+	static int actions[BOARD_SIZE + 1];
 
 	check(cache_counts, cache_actions, line, max_empty_count, center, color);
 	U64 key = get_key(gomoku_type, is_player, cache_counts, cache_actions, max_empty_count);
@@ -222,7 +221,7 @@ bool get_four_actions(GBIT &line, int center, int color, bool is_open, bool is_p
 			move(line, cache_action, color);
 			if (check_five(line, cache_action, color))
 			{
-				actions[++actions[0]] = (UC)cache_action;
+				actions[++actions[0]] = (int)cache_action;
 			}
 			undo(line, cache_action);
 		}
@@ -235,7 +234,7 @@ bool get_four_actions(GBIT &line, int center, int color, bool is_open, bool is_p
 		{
 			for (int i = 0; i < actions[0]; i++)
 			{
-				container[begin + i] = actions[i + 1];
+				container[begin + i] = (int)actions[i + 1];
 				count++;
 			}
 		}
@@ -249,244 +248,517 @@ bool get_four_actions(GBIT &line, int center, int color, bool is_open, bool is_p
 	return (bool)hash_value;
 }
 
-bool get_three_actions(GBIT &line, int center, int color, bool is_open, bool is_player,
-				       UC container[RANGE + 1] = NULL, int begin = 0, int &count = INSTRUCMENT_COUNT)
-{
 
+bool get_three_actions(GBIT &line, int center, int color, bool is_open, bool is_player,
+				       int container[RANGE + 1] = NULL, int begin = 0, int &count = INSTRUCMENT_COUNT)
+{
+	int index, max_empty_count = 3, cache_action, gomoku_type = is_open ? OPEN_THREE : THREE;
+	static int cache_counts[RANGE], cache_actions[RANGE];
+	static int actions[BOARD_SIZE + 1], attack_actions[BOARD_SIZE + 1];
+
+	check(cache_counts, cache_actions, line, max_empty_count, center, color);
+	U64 key = get_key(gomoku_type, is_player, cache_counts, cache_actions, max_empty_count);
+
+	int hash_value = cache_hash(key);
+
+	if (container == NULL && hash_value >= 0)
+	{
+		return (bool)hash_value;
+	}
+
+	int sign, delta;
+	actions[0] = 0;
+	attack_actions[0] = 0;
+	for (sign = -1; sign <= 1; sign += 2)
+	{
+		for (delta = 1; delta <= (RANGE - 1) / 2; delta++)
+		{
+			index = max_empty_count - 1 + sign * delta;
+			if (index < 0 || index >= RANGE)
+			{
+				break;
+			}
+			cache_action = cache_actions[index];
+			if (cache_action < 0)
+			{
+				break;
+			}
+			move(line, cache_action, color);
+			if (get_four_actions(line, center, color, is_open, true))
+			{
+				if (is_player)
+				{
+					actions[++actions[0]] = (int)cache_action;
+				}
+				else
+				{
+					attack_actions[++attack_actions[0]] = (int)cache_action;
+				}
+			}
+			undo(line, cache_action);
+		}
+	}
+
+	hash_value = actions[0] > 0 || attack_actions[0] > 0;
+	cache_hash(key, hash_value);
+
+	if (!is_player && attack_actions[0] > 0)
+	{
+		int player = color ^ 1, _cache_action, idx;
+		bool flag;
+		for (sign = -1; sign <= 1; sign += 2)
+		{
+			for (delta = 1; delta <= (RANGE - 1) / 2; delta++)
+			{
+				index = max_empty_count - 1 + sign * delta;
+				if (index < 0 || index >= RANGE)
+				{
+					break;
+				}
+				cache_action = cache_actions[index];
+				if (cache_action < 0)
+				{
+					break;
+				}
+				move(line, cache_action, player);
+
+				flag = true;
+				for (idx = 1; idx <= attack_actions[0]; idx++)
+				{
+					if (attack_actions[idx] == cache_action)
+					{
+						continue;
+					}
+					_cache_action = attack_actions[idx];
+					move(line, _cache_action, color);
+					if (get_four_actions(line, center, color, is_open, true))
+					{
+						undo(line, _cache_action);
+						undo(line, cache_action);
+						flag = false;
+						break;
+					}
+					undo(line, _cache_action);
+				}
+				if (flag)
+				{
+					undo(line, cache_action);
+					actions[++actions[0]] = cache_action;
+				}
+			}
+		}
+	}
+
+	if (container != NULL)
+	{
+		for (int i = 0; i < actions[0]; i++)
+		{
+			container[begin + i] = (int)actions[i + 1];
+			count++;
+		}
+	}
+
+	return (bool)hash_value;
 }
+
 
 bool get_two_actions(GBIT &line, int center, int color, bool is_open, bool is_player, 
-	                 UC container[RANGE + 1] = NULL, int begin = 0, int &count = INSTRUCMENT_COUNT)
+	                 int container[RANGE + 1] = NULL, int begin = 0, int &count = INSTRUCMENT_COUNT)
 {
-	
-}
+	int index, max_empty_count = 4, cache_action, gomoku_type = OPEN_TWO;
+	static int cache_counts[RANGE], cache_actions[RANGE];
+	static int actions[BOARD_SIZE + 1], attack_actions[BOARD_SIZE + 1];
 
+	check(cache_counts, cache_actions, line, max_empty_count, center, color);
+	U64 key = get_key(gomoku_type, is_player, cache_counts, cache_actions, max_empty_count);
 
-bool check_fast_open_three_and_three(int _board[], int action, int color, MOVE move_func,
-	bool is_open, bool is_player, int &begin = BEGIN, unsigned char *actions = NULL)
-{
-	clock_t start = clock();
+	int hash_value = cache_hash(key);
 
-	int index, max_empty_count = 3, cache_action, cache_counts[CHECK_SIZE], cache_actions[CHECK_SIZE];
-	fast_check(cache_counts, cache_actions, _board, action, color, move_func, max_empty_count);
-
-	U64 key = get_action_key((is_open ? OPEN_THREE : THREE), is_player, cache_counts, cache_actions, max_empty_count);
-
-	if (GOMOKU_TYPE_TABLE.find(key) == GOMOKU_TYPE_TABLE.end())
+	if (container == NULL && hash_value >= 0)
 	{
-		IVEC indice;
-		int attack_action_indice[CHECK_SIZE] = { 0 };
-		for (int i = 1; i < max_empty_count; i++)
+		return (bool)hash_value;
+	}
+
+	int sign, delta;
+	actions[0] = 0;
+	attack_actions[0] = 0;
+	for (sign = -1; sign <= 1; sign += 2)
+	{
+		for (delta = 1; delta <= (RANGE - 1) / 2; delta++)
 		{
-			for (int sign = -1; sign <= 1; sign += 2)
+			index = max_empty_count - 1 + sign * delta;
+			if (index < 0 || index >= RANGE)
 			{
-				index = sign * i + max_empty_count - 1;
+				break;
+			}
+			cache_action = cache_actions[index];
+			if (cache_action < 0)
+			{
+				break;
+			}
+			move(line, cache_action, color);
+			if (get_three_actions(line, center, color, true, true))
+			{
+				if (is_player)
+				{
+					actions[++actions[0]] = (int)cache_action;
+				}
+				else
+				{
+					attack_actions[++attack_actions[0]] = (int)cache_action;
+				}
+			}
+			undo(line, cache_action);
+		}
+	}
+
+	hash_value = actions[0] > 0 || attack_actions[0] > 0;
+	cache_hash(key, hash_value);
+
+	if (!is_player && attack_actions[0] > 0)
+	{
+		int player = color ^ 1, _cache_action, idx;
+		bool flag;
+		for (sign = -1; sign <= 1; sign += 2)
+		{
+			for (delta = 1; delta <= (RANGE - 1) / 2; delta++)
+			{
+				index = max_empty_count - 1 + sign * delta;
+				if (index < 0 || index >= RANGE)
+				{
+					break;
+				}
 				cache_action = cache_actions[index];
 				if (cache_action < 0)
 				{
-					continue;
+					break;
 				}
-				_board[cache_action] = color;
-				if (check_fast_open_four_and_four(_board, action, color, move_func, is_open, true))
+				move(line, cache_action, player);
+
+				flag = true;
+				for (idx = 1; idx <= attack_actions[0]; idx++)
 				{
-					if (is_player)
-					{
-						indice.push_back(index);
-					}
-					else
-					{
-						attack_action_indice[++attack_action_indice[0]] = index;
-					}
-				}
-				_board[cache_action] = EMPTY;
-			}
-		}
-		if (!is_player && attack_action_indice[0] > 0)
-		{
-			int player = player_mapping(color), _cache_action;
-			bool flag;
-			for (int i = 1; i < max_empty_count; i++)
-			{
-				for (int sign = -1; sign <= 1; sign += 2)
-				{
-					index = sign * i + max_empty_count - 1;
-					cache_action = cache_actions[index];
-					if (cache_action < 0)
+					if (attack_actions[idx] == cache_action)
 					{
 						continue;
 					}
-					_board[cache_action] = player;
-
-					flag = true;
-					for (int idx = 1; idx <= attack_action_indice[0]; idx++)
+					_cache_action = attack_actions[idx];
+					move(line, _cache_action, color);
+					if (get_three_actions(line, center, color, true, true))
 					{
-						if (attack_action_indice[idx] == index)
-						{
-							continue;
-						}
-						_cache_action = cache_actions[attack_action_indice[idx]];
-						_board[_cache_action] = color;
-						if (check_fast_open_four_and_four(_board, action, color, move_func, is_open, true))
-						{
-							_board[_cache_action] = EMPTY;
-							_board[cache_action] = EMPTY;
-							flag = false;
-							break;
-						}
-						_board[_cache_action] = EMPTY;
+						undo(line, _cache_action);
+						undo(line, cache_action);
+						flag = false;
+						break;
 					}
-					if (flag)
-					{
-						_board[cache_action] = EMPTY;
-						indice.push_back(index);
-					}
+					undo(line, _cache_action);
+				}
+				if (flag)
+				{
+					undo(line, cache_action);
+					actions[++actions[0]] = cache_action;
 				}
 			}
 		}
-
-		GOMOKU_TYPE_TABLE.insert(std::pair<U64, IVEC>(key, indice));
 	}
 
-	IVEC &indice = GOMOKU_TYPE_TABLE[key];
-	if (actions != NULL && !indice.empty())
+	if (container != NULL)
 	{
-		int check_gt = is_open ? OPEN_THREE : THREE;
-		for (IVEC::iterator idx = indice.begin(); idx != indice.end(); idx++)
+		for (int i = 0; i < actions[0]; i++)
 		{
-			if (!ActionTable.check(check_gt, cache_actions[*idx], color))
-			{
-				actions[begin++] = (unsigned char)cache_actions[*idx];
-			}
+			container[begin + i] = (int)actions[i + 1];
+			count++;
 		}
 	}
 
-#ifdef FAST_DEBUG
-	three_time += (double)(clock() - start) / CLOCKS_PER_SEC;
-#endif // FAST_DEBUG
-
-	if (!indice.empty())
-	{
-		return true;
-	}
-	else
-	{
-		return false;
-	}
+	return (bool)hash_value;
 }
 
-bool check_fast_open_two(int _board[], int action, int color, MOVE move_func,
-	bool is_open, bool is_player, int &begin = BEGIN, unsigned char *actions = NULL)
+
+typedef bool(*GetActions)(GBIT &, int, int, bool, bool, int *, int, int &);
+GetActions get_action_functions[3] = { get_four_actions, get_three_actions, get_two_actions };
+
+void generate_actions(int gomoku_type, bool is_player,
+					  int hash_table[GOMOKU_TYPE_HASH_TABLE_CONTAINER],
+					  U64 key_table[GOMOKU_TYPE_HASH_TABLE_CONTAINER],
+					  int head_table[GOMOKU_TYPE_HASH_TABLE_CONTAINER],
+					  int head_next_table[GOMOKU_TYPE_HASH_TABLE_CONTAINER],
+					  int action_table[GOMOKU_TYPE_HASH_TABLE_CONTAINER * 4],
+					  int action_next_table[GOMOKU_TYPE_HASH_TABLE_CONTAINER * 4], 
+					  int &gomoku_pointer, int &action_pointer, int &hash_count)
 {
-#ifdef FAST_DEBUG
-	clock_t start = clock();
+	int tmp_gomoku_pointer, action_head, action_index;
+	int i, begin_index, end_index, center, count;
+	int tmp_min, tmp_max, state, state_index, tmp_state_index, color, hash;
+	int action_container[BOARD_SIZE + 1];
+	U64 key;
+	GBIT line;
 
-#endif // FAST_DEBUG
+	bool is_open = gomoku_type % 2 == 1;
+	GetActions get_action_func = get_action_functions[(gomoku_type - 1) / 2];
 
-	int index, max_empty_count = 4, cache_action, cache_counts[CHECK_SIZE], cache_actions[CHECK_SIZE];
-	fast_check(cache_counts, cache_actions, _board, action, color, move_func, max_empty_count);
+	gomoku_pointer = 1;
+	action_pointer = 1;
+	hash_count = 0;
 
-	U64 key = get_action_key(OPEN_TWO, is_player, cache_counts, cache_actions, max_empty_count);
-
-	if (GOMOKU_TYPE_TABLE.find(key) == GOMOKU_TYPE_TABLE.end())
+	for (i = 0; i < GOMOKU_TYPE_HASH_TABLE_CONTAINER; i++)
 	{
-		IVEC indice;
-		int attack_action_indice[CHECK_SIZE] = { 0 };
-		for (int i = 1; i < max_empty_count; i++)
+		hash_table[i] = 0;
+	}
+
+	for (int size = 1; size <= BOARD_SIZE; size++)
+	{
+		begin_index = size <= HALF_SIZE ? 0 : BOARD_SIZE - size;
+		end_index = size <= HALF_SIZE ? size : BOARD_SIZE;
+		for (center = begin_index; center < end_index; center++)
 		{
-			for (int sign = -1; sign <= 1; sign += 2)
+			count = 1;
+			tmp_min = MAX(begin_index, center - (RANGE - 1) / 2);
+			tmp_max = MIN(end_index, center + (RANGE - 1) / 2 + 1);
+			for (i = tmp_min; i < tmp_max; i++)
 			{
-				index = sign * i + max_empty_count - 1;
-				cache_action = cache_actions[index];
-				if (cache_action < 0)
+				count *= 3;
+			}
+			for (state_index = 0; state_index < count; state_index++)
+			{
+				line.reset();
+				tmp_state_index = state_index;
+				for (i = tmp_min; i < tmp_max; i++)
+				{
+					state = tmp_state_index % 3;
+					tmp_state_index /= 3;
+					switch (state)
+					{
+					case 0:
+						line.set(2 * i + 1);
+						break;
+					case 1:
+						line.set(2 * i);
+						break;
+					default:
+						line.set(2 * i);
+						line.set(2 * i + 1);
+						break;
+					}
+				}
+				if (line[2 * center] == 0)
 				{
 					continue;
 				}
-				_board[cache_action] = color;
-				if (check_fast_open_three_and_three(_board, action, color, move_func, true, true))
+				std::cout << is_player << " " << gomoku_type << " " << line << std::endl;
+				color = line[2 * center + 1];
+				action_container[0] = 0;
+				get_action_func(line, center, color, is_open, is_player,
+								action_container, 1, action_container[0]);
+				if (action_container[0] > 0)
 				{
-					if (is_player)
+					key = line.to_ullong();
+					hash = (int)(key % GOMOKU_TYPE_HASH_TABLE_CONTAINER);
+					action_head = -1;
+					for (tmp_gomoku_pointer = hash_table[hash]; tmp_gomoku_pointer != 0;
+						 tmp_gomoku_pointer = head_next_table[tmp_gomoku_pointer])
 					{
-						indice.push_back(index);
-					}
-					else
-					{
-						attack_action_indice[++attack_action_indice[0]] = index;
-					}
-				}
-				_board[cache_action] = EMPTY;
-			}
-		}
-
-		if (!is_player && attack_action_indice[0] > 0)
-		{
-			int player = player_mapping(color), _cache_action;
-			bool flag;
-			for (int i = 1; i < max_empty_count; i++)
-			{
-				for (int sign = -1; sign <= 1; sign += 2)
-				{
-					index = sign * i + max_empty_count - 1;
-					cache_action = cache_actions[index];
-					if (cache_action < 0)
-					{
-						continue;
-					}
-					_board[cache_action] = player;
-
-					flag = true;
-					for (int idx = 1; idx <= attack_action_indice[0]; idx++)
-					{
-						if (attack_action_indice[idx] == index)
+						if (key_table[tmp_gomoku_pointer] == key)
 						{
-							continue;
-						}
-						_cache_action = cache_actions[attack_action_indice[idx]];
-						_board[_cache_action] = color;
-						if (check_fast_open_three_and_three(_board, action, color, move_func, true, true))
-						{
-							_board[_cache_action] = EMPTY;
-							_board[cache_action] = EMPTY;
-							flag = false;
+							action_head = head_table[tmp_gomoku_pointer];
 							break;
 						}
-						_board[_cache_action] = EMPTY;
 					}
-					if (flag)
+					if (action_head < 0)
 					{
-						_board[cache_action] = EMPTY;
-						indice.push_back(index);
+						action_head = 0;
+						for (action_index = 1; action_index <= action_container[0]; action_index++)
+						{
+							action_table[action_pointer] = action_container[action_index];
+							action_next_table[action_pointer] = action_head;
+							action_head = action_pointer++;
+						}
+
+						key_table[gomoku_pointer] = key;
+						head_table[gomoku_pointer] = action_head;
+						head_next_table[gomoku_pointer] = hash_table[hash];
+						if (hash_table[hash] == 0)
+						{
+							hash_count++;
+						}
+						hash_table[hash] = gomoku_pointer++;
 					}
 				}
 			}
 		}
-
-		GOMOKU_TYPE_TABLE.insert(std::pair<U64, IVEC>(key, indice));
 	}
+}
 
-	IVEC &indice = GOMOKU_TYPE_TABLE[key];
-	if (actions != NULL && !indice.empty())
+void GomokuTypeTable::generate_action_hash_table()
+{
+	for (int is_player = 0; is_player <= 1; is_player++)
 	{
-		int check_gt = OPEN_TWO;
-		for (IVEC::iterator idx = indice.begin(); idx != indice.end(); idx++)
+		for (int gomoku_type = OPEN_FOUR; gomoku_type <= OPEN_TWO; gomoku_type++)
 		{
-			if (!ActionTable.check(check_gt, cache_actions[*idx], color))
-			{
-				actions[begin++] = (unsigned char)cache_actions[*idx];
-			}
-			//actions[begin++] = (unsigned char)cache_actions[*idx];
+			generate_actions(gomoku_type, (bool)is_player,
+							 HASH_TABLE[is_player][gomoku_type - 1],
+							 KEY_TABLE[is_player][gomoku_type - 1], 
+							 HEAD_TABLE[is_player][gomoku_type - 1], 
+							 HEAD_NEXT_TABLE[is_player][gomoku_type - 1], 
+						     ACTION_TABLE[is_player][gomoku_type - 1], 
+							 ACTION_NEXT_TABLE[is_player][gomoku_type - 1], 
+							 gomoku_pointers[is_player][gomoku_type - 1], 
+							 action_pointers[is_player][gomoku_type - 1], 
+							 hash_counts[is_player][gomoku_type - 1]);
 		}
 	}
+}
 
-#ifdef FAST_DEBUG
-	two_time += (double)(clock() - start) / CLOCKS_PER_SEC;
-#endif // FAST_DEBUG
-
-	if (!indice.empty())
-	{
-		return true;
-	}
-	else
+bool GomokuTypeTable::load()
+{
+	if (freopen("gomoku_hash_table.txt", "r", stdin) == NULL)
 	{
 		return false;
 	}
+
+	int is_player, gomoku_type, count, i, tmp_i, tmp_hash;
+	for (is_player = 0; is_player <= 1; is_player++)
+	{
+		for (gomoku_type = OPEN_FOUR; gomoku_type <= OPEN_TWO; gomoku_type++)
+		{
+			scanf("%d", &hash_counts[is_player][gomoku_type - 1]);
+			count = 0;
+			for (i = 0; i < hash_counts[is_player][gomoku_type - 1]; i++)
+			{
+				scanf("%d %d", &tmp_i, &tmp_hash);
+				HASH_TABLE[is_player][gomoku_type - 1][tmp_i] = tmp_hash;
+			}
+		}
+	}
+	for (is_player = 0; is_player <= 1; is_player++)
+	{
+		for (gomoku_type = OPEN_FOUR; gomoku_type <= OPEN_TWO; gomoku_type++)
+		{
+			scanf("%d", &gomoku_pointers[is_player][gomoku_type - 1]);
+			for (i = 1; i < gomoku_pointers[is_player][gomoku_type - 1]; i++)
+			{
+				scanf("%llu %d %d",
+					  &KEY_TABLE[is_player][gomoku_type - 1][i],
+					  &HEAD_TABLE[is_player][gomoku_type - 1][i],
+					  &HEAD_NEXT_TABLE[is_player][gomoku_type - 1][i]);
+			}
+		}
+	}
+	for (is_player = 0; is_player <= 1; is_player++)
+	{
+		for (gomoku_type = OPEN_FOUR; gomoku_type <= OPEN_TWO; gomoku_type++)
+		{
+			scanf("%d", &action_pointers[is_player][gomoku_type - 1]);
+			for (i = 1; i < action_pointers[is_player][gomoku_type - 1]; i++)
+			{
+				scanf("%d %d",
+					  &ACTION_TABLE[is_player][gomoku_type - 1][i],
+					  &ACTION_NEXT_TABLE[is_player][gomoku_type - 1][i]);
+			}
+		}
+	}
+	fclose(stdin);
+	return true;
 }
+
+bool GomokuTypeTable::save()
+{
+	int is_player, gomoku_type, count, i;
+	freopen("gomoku_hash_table.txt", "w", stdout);
+	for (is_player = 0; is_player <= 1; is_player++)
+	{
+		for (gomoku_type = OPEN_FOUR; gomoku_type <= OPEN_TWO; gomoku_type++)
+		{
+			printf("%d\n", hash_counts[is_player][gomoku_type - 1]);
+			count = 0;
+			for (i = 0; i < GOMOKU_TYPE_HASH_TABLE_CONTAINER; i++)
+			{
+				if (HASH_TABLE[is_player][gomoku_type - 1][i] == 0)
+				{
+					continue;
+				}
+				printf("%d %d\n", i, HASH_TABLE[is_player][gomoku_type - 1][i]);
+				count++;
+				if (count == hash_counts[is_player][gomoku_type - 1])
+				{
+					break;
+				}
+			}
+		}
+	}
+	for (is_player = 0; is_player <= 1; is_player++)
+	{
+		for (gomoku_type = OPEN_FOUR; gomoku_type <= OPEN_TWO; gomoku_type++)
+		{
+			printf("%d\n", gomoku_pointers[is_player][gomoku_type - 1]);
+			for (i = 1; i < gomoku_pointers[is_player][gomoku_type - 1]; i++)
+			{
+				printf("%llu %d %d\n", 
+					   KEY_TABLE[is_player][gomoku_type - 1][i],
+					   HEAD_TABLE[is_player][gomoku_type - 1][i],
+					   HEAD_NEXT_TABLE[is_player][gomoku_type - 1][i]);
+			}
+		}
+	}
+	for (is_player = 0; is_player <= 1; is_player++)
+	{
+		for (gomoku_type = OPEN_FOUR; gomoku_type <= OPEN_TWO; gomoku_type++)
+		{
+			printf("%d\n", action_pointers[is_player][gomoku_type - 1]);
+			for (i = 1; i < action_pointers[is_player][gomoku_type - 1]; i++)
+			{
+				printf("%d %d\n",
+					   ACTION_TABLE[is_player][gomoku_type - 1][i],
+					   ACTION_NEXT_TABLE[is_player][gomoku_type - 1][i]);
+			}
+		}
+	}
+	fclose(stdout);
+	return true;
+}
+
+GomokuTypeTable::GomokuTypeTable()
+{
+	if (!load())
+	{
+		generate_action_hash_table();
+		save();
+	}
+}
+
+bool GomokuTypeTable::get_actions(bool is_player, int gomoku_type, GBIT masked_line, int container[], int begin, int &count)
+{
+	U64 key = masked_line.to_ullong();
+	int hash = (int)(key % GOMOKU_TYPE_HASH_TABLE_CONTAINER);
+	int index = 0, gt_pointer, act_pointer = -1;
+	for (gt_pointer = HASH_TABLE[(int)is_player][gomoku_type - 1][hash]; gt_pointer != 0;
+		 gt_pointer = HEAD_NEXT_TABLE[(int)is_player][gomoku_type - 1][gt_pointer])
+	{
+		if (KEY_TABLE[(int)is_player][gomoku_type - 1][gt_pointer] == key)
+		{
+			act_pointer = HEAD_TABLE[(int)is_player][gomoku_type - 1][gt_pointer];
+			break;
+		}
+	}
+	if (act_pointer < 0)
+	{
+		return false;
+	}
+	while (act_pointer != 0)
+	{
+		container[begin + index++] = ACTION_TABLE[(int)is_player][gomoku_type - 1][act_pointer];
+		count++;
+		act_pointer = ACTION_NEXT_TABLE[(int)is_player][gomoku_type - 1][act_pointer];
+	}
+	return true;
+}
+
+#ifdef GOMOKU_TABLE_DEBUG
+int main()
+{
+	GomokuTypeTable GOMOKU_TYPE_TABLE;
+	getchar();
+	return 0;
+}
+
+#endif

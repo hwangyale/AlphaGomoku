@@ -33,6 +33,9 @@
 #define GOMOKU_TABLE_CONTAINER 300000
 //#define GOMOKU_TYPE_CONTAINER 100000
 
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+
 #define CLOCKS_PER_SEC ((clock_t)1000)
 
 typedef unsigned long long U64;
@@ -52,7 +55,7 @@ class Table
 {
 public:
 	GBIT BitBoard;
-	GBIT Masks[4][BOARD_SIZE][BOARD_SIZE];
+	GBIT Masks[2][BOARD_SIZE][BOARD_SIZE];
 	U64 ZobristTable[2 * STONES + 4 + 10];
 
 	Table();
@@ -67,17 +70,12 @@ private:
 class GomokuTypeTable
 {
 public:
-	bool get_actions(bool is_player, int gomoku_type, GBIT masked_line, UC container[], int begin, int &count);
+	bool get_actions(bool is_player, int gomoku_type, GBIT masked_line, int container[], int begin, int &count);
 	GomokuTypeTable();
 private:
-	static U64 gomoku_table[GOMOKU_TABLE_CONTAINER];
 	bool load();
 	bool save();
-
-	bool get_four_actions();
-	bool get_three_actions();
-	bool get_two_actions();
-
+	void generate_action_hash_table();
 };
 
 class BitBoard
