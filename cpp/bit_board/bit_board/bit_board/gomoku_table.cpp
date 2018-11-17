@@ -10,6 +10,8 @@ int ACTION_TABLE[2][5][GOMOKU_TYPE_HASH_TABLE_CONTAINER * 4];
 int ACTION_NEXT_TABLE[2][5][GOMOKU_TYPE_HASH_TABLE_CONTAINER * 4];
 int gomoku_pointers[2][5], action_pointers[2][5], hash_counts[2][5];
 
+GomokuTypeTable GOMOKU_TYPE_TABLE;
+
 void check(int cache_counts[RANGE], int cache_actions[RANGE], GBIT &line, int max_empty_count, int center, int color)
 {
 	int empty_count, tmp_action, delta, opponent = player_mapping(color);
@@ -753,12 +755,3 @@ bool GomokuTypeTable::get_actions(bool is_player, int gomoku_type, GBIT masked_l
 	return true;
 }
 
-#ifdef GOMOKU_TABLE_DEBUG
-int main()
-{
-	GomokuTypeTable GOMOKU_TYPE_TABLE;
-	getchar();
-	return 0;
-}
-
-#endif
