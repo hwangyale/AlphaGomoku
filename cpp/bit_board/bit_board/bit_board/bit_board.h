@@ -112,6 +112,7 @@ private:
 	void release();
 	void reset();
 	void copy(const BitBoard &copy_board);
+	GBIT &get_line(UC action, UC direction);
 	void check_gomoku_type();
 	void get_fast_actions(bool is_player, int gomoku_type, UC container[], int begin, int &count);
 	void count_actions(bool is_player, int gomoku_type);

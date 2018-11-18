@@ -148,22 +148,97 @@ BitBoard &BitBoard::operator = (const BitBoard &copyboard)
 	return *this;
 }
 
+GBIT &BitBoard::get_line(UC action, UC direction)
+{
+	int row = (int)(action / BOARD_SIZE), col = (int)(action % BOARD_SIZE);
+	switch (direction)
+	{
+	case 0:
+		return bitboards[0][row];
+	case 1:
+		return bitboards[1][col];
+	case 2:
+		if (row == col)
+		{
+			return bitboards[2][HALF_SIZE];
+		}
+		else if (row > col)
+		{
+			if (row - col > HALF_SIZE)
+			{
+				return bitboards[2][HALF_SIZE - BOARD_SIZE + row - col];
+			}
+			else
+			{
+				return bitboards[2][HALF_SIZE - row + col];
+			}
+		}
+		else
+		{
+			if (col - row > HALF_SIZE)
+			{
+				return bitboards[2][HALF_SIZE - BOARD_SIZE + col - row];
+			}
+			else
+			{
+				return bitboards[2][HALF_SIZE - col + row];
+			}
+		}
+	case 3:
+		if (row == BOARD_SIZE - 1 - col)
+		{
+			return bitboards[3][HALF_SIZE];
+		}
+		else if (row > BOARD_SIZE - 1 - col)
+		{
+			if (row - BOARD_SIZE + 1 + col > HALF_SIZE)
+			{
+				return bitboards[3][HALF_SIZE - BOARD_SIZE + row - BOARD_SIZE + 1 + col];
+			}
+			else
+			{
+				return bitboards[3][HALF_SIZE - row + BOARD_SIZE - 1 - col];
+			}
+		}
+		else
+		{
+			if (BOARD_SIZE - 1 - col - row > HALF_SIZE)
+			{
+				return bitboards[3][HALF_SIZE - 1 - col - row];
+			}
+			else
+			{
+				return bitboards[3][HALF_SIZE - BOARD_SIZE + 1 + col + row];
+			}
+		}
+	}
+	
+}
+
+extern bool check_five(GBIT &line, int center, int color);
+
 void BitBoard::move(UC action)
 {
-	bool flag = false;
+	bool flag;
 	int row = (int)(action / BOARD_SIZE), col = (int)(action % BOARD_SIZE);
 	int i, j;
+	int color = (int)(player == WHITE);
 
 	bitboards[0][row].set(2 * col);
 	if (player == WHITE)
 	{
 		bitboards[0][row].set(2 * col + 1);
 	}
+	flag = check_five(bitboards[0][row], col, color);
 
 	bitboards[1][col].set(2 * row);
 	if (player == WHITE)
 	{
 		bitboards[1][col].set(2 * row + 1);
+	}
+	if (!flag)
+	{
+		flag = check_five(bitboards[1][col], row, color);
 	}
 
 	if (row == col)
@@ -202,15 +277,50 @@ void BitBoard::move(UC action)
 	{
 		bitboards[2][i].set(2 * j + 1);
 	}
-	
-	/*bool flag = false;
-	for (int func_idx = 0; func_idx < 4; func_idx++)
+	if (!flag)
 	{
-		if (check_fast_five(_board, action, player, move_list[func_idx]))
+		flag = check_five(bitboards[2][i], j, color);
+	}
+
+	if (row == BOARD_SIZE - 1 - col)
+	{
+		i = HALF_SIZE;
+		j = row;
+	}
+	else if (row > BOARD_SIZE - 1 - col)
+	{
+		if (BOARD_SIZE - 1 - col + HALF_SIZE < row)
 		{
-			flag = true;
-			break;
+			i = HALF_SIZE - BOARD_SIZE + row - BOARD_SIZE + 1 + col;
+			j = BOARD_SIZE - 1 - col;
 		}
+		else
+		{
+			i = HALF_SIZE - row + BOARD_SIZE - 1 - col;
+			j = row;
+		}
+	}
+	else
+	{
+		if (row + HALF_SIZE < BOARD_SIZE - 1 - col)
+		{
+			i = HALF_SIZE - BOARD_SIZE + BOARD_SIZE - 1 - col - row;
+			j = row;
+		}
+		else
+		{
+			i = HALF_SIZE - BOARD_SIZE + 1 + col + row;
+			j = BOARD_SIZE - 1 - col;
+		}
+	}
+	bitboards[3][i].set(2 * j);
+	if (player == WHITE)
+	{
+		bitboards[3][i].set(2 * j + 1);
+	}
+	if (!flag)
+	{
+		flag = check_five(bitboards[3][i], j, color);
 	}
 
 	if (flag)
@@ -219,7 +329,6 @@ void BitBoard::move(UC action)
 		is_over = true;
 	}
 
-	_board[action] = player;
 	step++;
 	if (!is_over && step == STONES)
 	{
@@ -227,9 +336,9 @@ void BitBoard::move(UC action)
 		winner = EMPTY;
 	}
 	history[++history[0]] = action;
-	zobristKey ^= zobrist[2 * action + (player == BLACK ? 0 : 1)];
-	player = player == BLACK ? WHITE : BLACK;
-	check_gomoku_type();*/
+	zobristKey ^= TABLE.ZobristTable[2 * action + color];
+	player = player_mapping(player);
+	check_gomoku_type();
 }
 
 #ifdef DEBUG
