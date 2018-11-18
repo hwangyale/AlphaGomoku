@@ -147,6 +147,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="bit_board.cpp" />
+    <ClCompile Include="bit_board_type.cpp" />
     <ClCompile Include="gomoku_table.cpp" />
     <ClCompile Include="table.cpp" />
     <ClCompile Include="test_gomoku_table.cpp" />

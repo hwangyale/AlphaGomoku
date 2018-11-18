@@ -150,6 +150,59 @@ BitBoard &BitBoard::operator = (const BitBoard &copyboard)
 
 void BitBoard::move(UC action)
 {
+	bool flag = false;
+	int row = (int)(action / BOARD_SIZE), col = (int)(action % BOARD_SIZE);
+	int i, j;
+
+	bitboards[0][row].set(2 * col);
+	if (player == WHITE)
+	{
+		bitboards[0][row].set(2 * col + 1);
+	}
+
+	bitboards[1][col].set(2 * row);
+	if (player == WHITE)
+	{
+		bitboards[1][col].set(2 * row + 1);
+	}
+
+	if (row == col)
+	{
+		i = HALF_SIZE;
+		j = row;
+	}
+	else if (row > col)
+	{
+		if (col + HALF_SIZE < row)
+		{
+			i = HALF_SIZE - BOARD_SIZE + row - col;
+			j = col;
+		}
+		else
+		{
+			i = HALF_SIZE - row + col;
+			j = row;
+		}
+	}
+	else
+	{
+		if (row + HALF_SIZE < col)
+		{
+			i = HALF_SIZE - BOARD_SIZE + col - row;
+			j = row;
+		}
+		else
+		{
+			i = HALF_SIZE - col + row;
+			j = col;
+		}
+	}
+	bitboards[2][i].set(2 * j);
+	if (player == WHITE)
+	{
+		bitboards[2][i].set(2 * j + 1);
+	}
+	
 	/*bool flag = false;
 	for (int func_idx = 0; func_idx < 4; func_idx++)
 	{

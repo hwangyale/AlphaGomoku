@@ -106,7 +106,7 @@ private:
 	int gomoku_indice[11];
 	int action_indice[11];
 	bool allocated;
-	std::bitset<2 * BOARD_SIZE> bitboards[4][BOARD_SIZE];
+	GBIT bitboards[4][BOARD_SIZE];
 
 	void allocate();
 	void release();

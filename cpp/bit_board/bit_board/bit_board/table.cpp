@@ -3,9 +3,9 @@
 
 void Table::init_BitBoard()
 {
-	for (int i = 0; i < 2 * BOARD_SIZE; i += 2)
+	for (int i = 0; i < BOARD_SIZE; i++)
 	{
-		BitBoard.set(i);
+		BitBoard.set(2 * i + 1);
 	}
 }
 
