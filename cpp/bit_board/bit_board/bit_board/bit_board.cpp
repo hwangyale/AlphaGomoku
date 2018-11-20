@@ -76,6 +76,17 @@ BitBoard::BitBoard()
 	reset();
 }
 
+BitBoard::BitBoard(bool not_allocated)
+{
+	allocated = false;
+	allocate();
+	reset();
+	if (not_allocated)
+	{
+		release();
+	}
+}
+
 BitBoard::BitBoard(std::vector<UC> _history)
 {
 	allocated = false;

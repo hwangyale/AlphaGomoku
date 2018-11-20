@@ -89,6 +89,7 @@ public:
 	U64 zobristKey;
 
 	BitBoard();
+	BitBoard(bool not_allocated);
 	BitBoard(IVEC _history);
 	BitBoard(std::vector<UC> history);
 	BitBoard(const BitBoard &copyboard);
