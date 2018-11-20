@@ -1,5 +1,4 @@
 #include "bit_board.h"
-#define MAX_BOARD 500000
 
 UC SHARED_GOMOKU_TYPES[MAX_BOARD * GOMOKU_TYPE_CONTAINER] = { 0 };
 UC SHARED_DIRECTIONS[MAX_BOARD * GOMOKU_TYPE_CONTAINER] = { 0 };
@@ -72,12 +71,16 @@ void BitBoard::reset()
 
 BitBoard::BitBoard()
 {
+	allocated = false;
 	allocate();
+	reset();
 }
 
 BitBoard::BitBoard(std::vector<UC> _history)
 {
+	allocated = false;
 	allocate();
+	reset();
 	int _step = (int)_history.size();
 	for (int i = 0; i < _step; i++)
 	{
@@ -87,7 +90,9 @@ BitBoard::BitBoard(std::vector<UC> _history)
 
 BitBoard::BitBoard(IVEC _history)
 {
+	allocated = false;
 	allocate();
+	reset();
 	int _step = (int)_history.size();
 	for (int i = 0; i < _step; i++)
 	{
@@ -97,7 +102,6 @@ BitBoard::BitBoard(IVEC _history)
 
 void BitBoard::copy(const BitBoard &copyboard)
 {
-	allocate();
 	int i, j;
 	player = copyboard.player;
 	step = copyboard.step;
@@ -138,38 +142,45 @@ void BitBoard::copy(const BitBoard &copyboard)
 
 BitBoard::BitBoard(const BitBoard &copyboard)
 {
+	allocated = false;
 	allocate();
 	copy(copyboard);
 }
 
 BitBoard &BitBoard::operator = (const BitBoard &copyboard)
 {
+	allocate();
 	copy(copyboard);
 	return *this;
 }
 
-GBIT &BitBoard::get_line(UC action, UC direction)
+GBIT &BitBoard::get_line(UC action, UC direction, int &center)
 {
 	int row = (int)(action / BOARD_SIZE), col = (int)(action % BOARD_SIZE);
 	switch (direction)
 	{
 	case 0:
+		center = col;
 		return bitboards[0][row];
 	case 1:
+		center = row;
 		return bitboards[1][col];
 	case 2:
 		if (row == col)
 		{
+			center = row;
 			return bitboards[2][HALF_SIZE];
 		}
 		else if (row > col)
 		{
 			if (row - col > HALF_SIZE)
 			{
+				center = col;
 				return bitboards[2][HALF_SIZE - BOARD_SIZE + row - col];
 			}
 			else
 			{
+				center = row;
 				return bitboards[2][HALF_SIZE - row + col];
 			}
 		}
@@ -177,26 +188,31 @@ GBIT &BitBoard::get_line(UC action, UC direction)
 		{
 			if (col - row > HALF_SIZE)
 			{
-				return bitboards[2][HALF_SIZE - BOARD_SIZE + col - row];
+				center = row;
+				return bitboards[2][HALF_SIZE + BOARD_SIZE - col + row];
 			}
 			else
 			{
-				return bitboards[2][HALF_SIZE - col + row];
+				center = col;
+				return bitboards[2][HALF_SIZE - row + col];
 			}
 		}
 	case 3:
 		if (row == BOARD_SIZE - 1 - col)
 		{
+			center = row;
 			return bitboards[3][HALF_SIZE];
 		}
 		else if (row > BOARD_SIZE - 1 - col)
 		{
 			if (row - BOARD_SIZE + 1 + col > HALF_SIZE)
 			{
+				center = BOARD_SIZE - 1 - col;
 				return bitboards[3][HALF_SIZE - BOARD_SIZE + row - BOARD_SIZE + 1 + col];
 			}
 			else
 			{
+				center = row;
 				return bitboards[3][HALF_SIZE - row + BOARD_SIZE - 1 - col];
 			}
 		}
@@ -204,123 +220,43 @@ GBIT &BitBoard::get_line(UC action, UC direction)
 		{
 			if (BOARD_SIZE - 1 - col - row > HALF_SIZE)
 			{
-				return bitboards[3][HALF_SIZE - 1 - col - row];
+				center = row;
+				return bitboards[3][HALF_SIZE + 1 + col + row];
 			}
 			else
 			{
-				return bitboards[3][HALF_SIZE - BOARD_SIZE + 1 + col + row];
+				center = BOARD_SIZE - 1 - col;
+				return bitboards[3][HALF_SIZE - row + BOARD_SIZE - 1 - col];
 			}
 		}
 	}
-	
 }
 
 extern bool check_five(GBIT &line, int center, int color);
 
+#ifdef BOARD_TEST
+extern TestBoard TEST;
+#endif
+
 void BitBoard::move(UC action)
 {
-	bool flag;
+	bool flag = false;
 	int row = (int)(action / BOARD_SIZE), col = (int)(action % BOARD_SIZE);
-	int i, j;
+	int center;
 	int color = (int)(player == WHITE);
 
-	bitboards[0][row].set(2 * col);
-	if (player == WHITE)
+	for (UC direction = 0; direction < 4; direction++)
 	{
-		bitboards[0][row].set(2 * col + 1);
-	}
-	flag = check_five(bitboards[0][row], col, color);
-
-	bitboards[1][col].set(2 * row);
-	if (player == WHITE)
-	{
-		bitboards[1][col].set(2 * row + 1);
-	}
-	if (!flag)
-	{
-		flag = check_five(bitboards[1][col], row, color);
-	}
-
-	if (row == col)
-	{
-		i = HALF_SIZE;
-		j = row;
-	}
-	else if (row > col)
-	{
-		if (col + HALF_SIZE < row)
+		GBIT &line = get_line(action, direction, center);
+		line.set(2 * center);
+		if (player == BLACK)
 		{
-			i = HALF_SIZE - BOARD_SIZE + row - col;
-			j = col;
+			line.set(2 * center + 1, 0);
 		}
-		else
+		if (!flag)
 		{
-			i = HALF_SIZE - row + col;
-			j = row;
+			flag = check_five(line, center, color);
 		}
-	}
-	else
-	{
-		if (row + HALF_SIZE < col)
-		{
-			i = HALF_SIZE - BOARD_SIZE + col - row;
-			j = row;
-		}
-		else
-		{
-			i = HALF_SIZE - col + row;
-			j = col;
-		}
-	}
-	bitboards[2][i].set(2 * j);
-	if (player == WHITE)
-	{
-		bitboards[2][i].set(2 * j + 1);
-	}
-	if (!flag)
-	{
-		flag = check_five(bitboards[2][i], j, color);
-	}
-
-	if (row == BOARD_SIZE - 1 - col)
-	{
-		i = HALF_SIZE;
-		j = row;
-	}
-	else if (row > BOARD_SIZE - 1 - col)
-	{
-		if (BOARD_SIZE - 1 - col + HALF_SIZE < row)
-		{
-			i = HALF_SIZE - BOARD_SIZE + row - BOARD_SIZE + 1 + col;
-			j = BOARD_SIZE - 1 - col;
-		}
-		else
-		{
-			i = HALF_SIZE - row + BOARD_SIZE - 1 - col;
-			j = row;
-		}
-	}
-	else
-	{
-		if (row + HALF_SIZE < BOARD_SIZE - 1 - col)
-		{
-			i = HALF_SIZE - BOARD_SIZE + BOARD_SIZE - 1 - col - row;
-			j = row;
-		}
-		else
-		{
-			i = HALF_SIZE - BOARD_SIZE + 1 + col + row;
-			j = BOARD_SIZE - 1 - col;
-		}
-	}
-	bitboards[3][i].set(2 * j);
-	if (player == WHITE)
-	{
-		bitboards[3][i].set(2 * j + 1);
-	}
-	if (!flag)
-	{
-		flag = check_five(bitboards[3][i], j, color);
 	}
 
 	if (flag)
@@ -339,13 +275,63 @@ void BitBoard::move(UC action)
 	zobristKey ^= TABLE.ZobristTable[2 * action + color];
 	player = player_mapping(player);
 	check_gomoku_type();
+	#ifdef BOARD_TEST
+	TEST.test(*this);
+	#endif
 }
 
-#ifdef DEBUG
-int main()
+IVEC BitBoard::get_board()
 {
-	getchar();
-	return 0;
+	IVEC _board(STONES, EMPTY);
+	int color = BLACK;
+	for (int i = 1; i <= history[0]; i++)
+	{
+		_board[history[i]] = color;
+		color = player_mapping(color);
+	}
+	return _board;
 }
 
-#endif
+IVEC BitBoard::get_actions(bool is_player, int gomoku_type)
+{
+	int index = ((is_player ? player : player_mapping(player)) == BLACK ? 0 : 5) + gomoku_type;
+	int begin = action_indice[index - 1], end = action_indice[index];
+	IVEC _actions(end - begin, 0);
+	for (int i = 0; i < end - begin; i++)
+	{
+		_actions[i] = (int)SHARED_ACTIONS[begin + i];
+	}
+	return _actions;
+}
+
+void BitBoard::get_fast_actions(bool is_player, int gomoku_type, UC container[], int begin, int &count)
+{
+	int index = ((is_player ? player : player_mapping(player)) == BLACK ? 0 : 5) + gomoku_type;
+	int action_begin = action_indice[index - 1];
+	int number = action_indice[index] - action_begin;
+	for (int i = 0; i < number; i++)
+	{
+		container[begin + i] = SHARED_ACTIONS[action_begin + i];
+		count++;
+	}
+}
+
+int BitBoard::count_actions(bool is_player, int gomoku_type)
+{
+	int index = ((is_player ? player : player_mapping(player)) == BLACK ? 0 : 5) + gomoku_type;
+	return action_indice[index] - action_indice[index - 1];
+}
+
+bool BitBoard::check_action(bool is_player, int gomoku_type, UC action)
+{
+	int index = ((is_player ? player : player_mapping(player)) == BLACK ? 0 : 5) + gomoku_type;
+	int action_end = action_indice[index];
+	for (int i = action_indice[index - 1]; i < action_end; i++)
+	{
+		if (SHARED_ACTIONS[i] == action)
+		{
+			return true;
+		}
+	}
+	return false;
+}

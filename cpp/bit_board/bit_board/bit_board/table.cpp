@@ -54,9 +54,13 @@ void Table::init_Masks()
 GBIT &Table::get_mask(UC action, UC direction)
 {
 	int row = action / BOARD_SIZE, col = action % BOARD_SIZE;
-	if (direction < 2)
+	if (direction == 0)
 	{
 		return Masks[0][row][col];
+	}
+	else if (direction == 1)
+	{
+		return Masks[0][col][row];
 	}
 	else if (direction == 2)
 	{
@@ -69,13 +73,13 @@ GBIT &Table::get_mask(UC action, UC direction)
 		if (row < col)
 		{
 			i = BOARD_SIZE + row - col - 1;
-			j = i < HALF_SIZE ? row : (BOARD_SIZE - i) + row;
+			j = i < HALF_SIZE ? row : col;
 			return Masks[1][i][j];
 		}
 		else
 		{
 			i = BOARD_SIZE + col - row - 1;
-			j = i < HALF_SIZE ? col : (BOARD_SIZE - i) + col;
+			j = i < HALF_SIZE ? col : row;
 			return Masks[1][i][j];
 		}
 	}
@@ -90,13 +94,13 @@ GBIT &Table::get_mask(UC action, UC direction)
 		if (row < BOARD_SIZE - col - 1)
 		{
 			i = row + col;
-			j = i < HALF_SIZE ? row : (BOARD_SIZE - i) + row;
+			j = i < HALF_SIZE ? row : BOARD_SIZE - col - 1;
 			return Masks[1][i][j];
 		}
 		else
 		{
 			i = 2 * BOARD_SIZE - col - row - 2;
-			j = i < HALF_SIZE ? BOARD_SIZE - col - 1 : (BOARD_SIZE - i) + BOARD_SIZE - col - 1;
+			j = i < HALF_SIZE ? BOARD_SIZE - col - 1 : row;
 			return Masks[1][i][j];
 		}
 	}

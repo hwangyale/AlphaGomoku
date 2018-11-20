@@ -728,11 +728,12 @@ GomokuTypeTable::GomokuTypeTable()
 	}
 }
 
-bool GomokuTypeTable::get_actions(bool is_player, int gomoku_type, GBIT masked_line, int container[], int begin, int &count)
+bool GomokuTypeTable::get_actions(bool is_player, int gomoku_type, GBIT &masked_line, int container[], int begin, int &count)
 {
 	U64 key = masked_line.to_ullong();
 	int hash = (int)(key % GOMOKU_TYPE_HASH_TABLE_CONTAINER);
 	int index = 0, gt_pointer, act_pointer = -1;
+	static int ins_container[1], ins_begin, ins_count;
 	for (gt_pointer = HASH_TABLE[(int)is_player][gomoku_type - 1][hash]; gt_pointer != 0;
 		 gt_pointer = HEAD_NEXT_TABLE[(int)is_player][gomoku_type - 1][gt_pointer])
 	{
@@ -744,7 +745,11 @@ bool GomokuTypeTable::get_actions(bool is_player, int gomoku_type, GBIT masked_l
 	}
 	if (act_pointer < 0)
 	{
-		return false;
+		if (is_player)
+		{
+			return false;
+		}
+		return get_actions(true, gomoku_type, masked_line, ins_container, ins_begin, ins_count);
 	}
 	while (act_pointer != 0)
 	{

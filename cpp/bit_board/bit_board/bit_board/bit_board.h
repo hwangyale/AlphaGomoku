@@ -27,6 +27,7 @@
 #define THREE 4
 #define OPEN_TWO 5
 
+#define MAX_BOARD 500000
 #define GOMOKU_TYPE_CONTAINER 225
 #define ACTION_CONTAINER 225
 #define RANGE 9
@@ -70,7 +71,7 @@ private:
 class GomokuTypeTable
 {
 public:
-	bool get_actions(bool is_player, int gomoku_type, GBIT masked_line, int container[], int begin, int &count);
+	bool get_actions(bool is_player, int gomoku_type, GBIT &masked_line, int container[], int begin, int &count);
 	GomokuTypeTable();
 private:
 	bool load();
@@ -94,17 +95,20 @@ public:
 	BitBoard &operator = (const BitBoard &copyboard);
 	~BitBoard();
 
+	GBIT &get_line(UC action, UC direction, int &center);
 	void move(UC action);
 
 	IVEC get_board();
 	IVEC get_actions(bool is_player, int gomoku_type);
 
-	bool evaluate(UC actions[], int begin_index, int &count, int unknown = -1);
+	int gomoku_indice[11];
+	int action_indice[11];
+
+	int evaluate(UC actions[], int begin_index, int &count, int current, 
+			     std::unordered_map<U64, int> &cache_table, int unknown = -1);
 
 private:
 	UC history[STONES + 1];
-	int gomoku_indice[11];
-	int action_indice[11];
 	bool allocated;
 	GBIT bitboards[4][BOARD_SIZE];
 
@@ -112,11 +116,24 @@ private:
 	void release();
 	void reset();
 	void copy(const BitBoard &copy_board);
-	GBIT &get_line(UC action, UC direction);
 	void check_gomoku_type();
 	void get_fast_actions(bool is_player, int gomoku_type, UC container[], int begin, int &count);
-	void count_actions(bool is_player, int gomoku_type);
-	void check_action(bool is_player, int gomoku_type, UC action);
+	int count_actions(bool is_player, int gomoku_type);
+	bool check_action(bool is_player, int gomoku_type, UC action);
 };
+
+#ifdef BOARD_TEST
+class TestBoard
+{
+public:
+	TestBoard();
+	void test(BitBoard &board);
+	void print();
+private:
+	int max_pointer = 0;
+	int max_gomoku_type_number = 0;
+	int max_action_number = 0;
+};
+#endif
 
 #endif

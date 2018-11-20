@@ -38,5 +38,14 @@
     <ClCompile Include="bit_board_type.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="test_board.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="evaluate.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="vct.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

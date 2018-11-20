@@ -1,5 +1,6 @@
 #ifdef GOMOKU_TABLE_TEST
 #include "bit_board.h"
+#include <string>
 
 void print_line(GBIT &line)
 {
@@ -61,10 +62,9 @@ extern GomokuTypeTable GOMOKU_TYPE_TABLE;
 int main()
 {
 	int i, j;
-	GBIT line;
-	int count;
+	int count = 0;
 	int container[BOARD_SIZE];
-	for (i = 0; i < 10000; i++)
+	/*for (i = 0; i < 10000; i++)
 	{
 		line = get_sample();
 		count = 0;
@@ -81,7 +81,20 @@ int main()
 			}
 			printf("\n");
 		}
+	}*/
+	GBIT line(std::string("001010101010111110100000000000"));
+	std::cout << line.to_ullong() << std::endl;
+	GOMOKU_TYPE_TABLE.get_actions(false, OPEN_TWO, line, container, 0, count);
+
+	//std::sort(container, container + count);
+	std::cout << line << std::endl;
+	print_line(line);
+	printf("count: %d    | ", count);
+	for (j = 0; j < count; j++)
+	{
+		printf("%d | ", container[j]);
 	}
+	printf("\n");
 	return 0;
 }
 
