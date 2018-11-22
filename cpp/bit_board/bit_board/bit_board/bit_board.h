@@ -108,14 +108,15 @@ public:
 	int evaluate(UC actions[], int begin_index, int &count, int current, 
 			     std::unordered_map<U64, int> &cache_table, int unknown = -1);
 
+	void allocate();
+	void release();
+	void reset();
+
 private:
 	UC history[STONES + 1];
 	bool allocated;
 	GBIT bitboards[4][BOARD_SIZE];
 
-	void allocate();
-	void release();
-	void reset();
 	void copy(const BitBoard &copy_board);
 	void check_gomoku_type();
 	void get_fast_actions(bool is_player, int gomoku_type, UC container[], int begin, int &count);

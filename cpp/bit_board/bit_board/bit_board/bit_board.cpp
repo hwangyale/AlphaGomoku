@@ -12,6 +12,7 @@ void BitBoard::allocate()
 {
 	if (!allocated)
 	{
+		//std::cout << "allocated!" << std::endl;
 		int shared_index;
 		if (SHARED_INDEX_HEAD != SHARED_INDEX_TAIL)
 		{
@@ -33,6 +34,7 @@ void BitBoard::release()
 {
 	if (allocated)
 	{
+		//std::cout << "released!" << std::endl;
 		SHARED_INDEX_QUEUE[SHARED_INDEX_TAIL] = gomoku_indice[0] / GOMOKU_TYPE_CONTAINER;
 		SHARED_INDEX_TAIL = (SHARED_INDEX_TAIL + 1) % MAX_BOARD;
 		allocated = false;
@@ -41,6 +43,7 @@ void BitBoard::release()
 
 BitBoard::~BitBoard()
 {
+	//std::cout << "destruct!" << std::endl;
 	release();
 }
 
@@ -74,14 +77,15 @@ BitBoard::BitBoard()
 	allocated = false;
 	allocate();
 	reset();
+	release();
 }
 
-BitBoard::BitBoard(bool not_allocated)
+BitBoard::BitBoard(bool _allocate)
 {
 	allocated = false;
 	allocate();
 	reset();
-	if (not_allocated)
+	if (!_allocate)
 	{
 		release();
 	}

@@ -3,7 +3,7 @@
 extern std::unordered_map<U64, int> BLACK_VCT_TABLE, WHITE_VCT_TABLE;
 
 int BitBoard::evaluate(UC actions[], int begin_index, int &count, int current, 
-					   std::unordered_map<U64, int> &cache_table, int unknown = -1)
+					   std::unordered_map<U64, int> &cache_table, int unknown)
 {
 	std::unordered_map<U64, int> &player_vct = current == BLACK ? BLACK_VCT_TABLE : WHITE_VCT_TABLE;
 	std::unordered_map<U64, int> &opponent_vct = current != BLACK ? BLACK_VCT_TABLE : WHITE_VCT_TABLE;

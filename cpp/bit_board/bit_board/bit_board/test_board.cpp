@@ -147,7 +147,7 @@ int main()
 		getchar();
 	}*/
 
-	int N = 100000, act;
+	int N = 1, act;
 	double count = 0;
 	clock_t start = clock();
 	srand(0);
@@ -163,6 +163,7 @@ int main()
 			count += 1.0;
 		}
 	}
+	printf("move number: %.0f\n", count);
 	printf("average move time: %.4f\n", (double)((clock() - start) / count));
 	TEST.print();
 	return 0;
