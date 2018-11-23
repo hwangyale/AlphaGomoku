@@ -51,6 +51,7 @@ bool check_single_action(BitBoard &board, UC action, UC direction,
 											  _container, 0, _count);
 
 	MOVE &move_func = move_list[(int)direction];
+	int index = 0;
 	for (int i = 0; i < _count; i++)
 	{
 		tmp_action = move_func((int)action, _container[i] - center);
@@ -58,7 +59,7 @@ bool check_single_action(BitBoard &board, UC action, UC direction,
 		{
 			continue;
 		}
-		container[begin + i] = (UC)tmp_action;
+		container[begin + index++] = (UC)tmp_action;
 		stored.set(tmp_action);
 		count++;
 	}
@@ -112,9 +113,9 @@ void BitBoard::check_gomoku_type()
 	for (int color = BLACK; color <= WHITE; color++)
 	{
 		int base = color == BLACK ? 0 : 5;
-		stored.reset();
 		for (int gt = OPEN_FOUR; gt <= OPEN_TWO; gt++)
 		{
+			stored.reset();
 			int &gt_index = gomoku_indice[base + gt];
 			int &act_index = action_indice[base + gt];
 			gt_index = gomoku_indice[base + gt - 1];

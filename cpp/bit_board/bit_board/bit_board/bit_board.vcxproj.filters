@@ -47,5 +47,11 @@
     <ClCompile Include="vct.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="test_vct.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="test_functions.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

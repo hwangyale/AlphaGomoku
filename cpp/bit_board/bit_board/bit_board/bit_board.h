@@ -27,12 +27,10 @@
 #define THREE 4
 #define OPEN_TWO 5
 
-#define MAX_BOARD 500000
+#define MAX_BOARD 1000000
 #define GOMOKU_TYPE_CONTAINER 225
 #define ACTION_CONTAINER 225
 #define RANGE 9
-#define GOMOKU_TABLE_CONTAINER 300000
-//#define GOMOKU_TYPE_CONTAINER 100000
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -82,6 +80,7 @@ private:
 class BitBoard
 {
 public:
+	bool allocated;
 	char player;
 	UC step;
 	bool is_over;
@@ -106,7 +105,7 @@ public:
 	int action_indice[11];
 
 	int evaluate(UC actions[], int begin_index, int &count, int current, 
-			     std::unordered_map<U64, int> &cache_table, int unknown = -1);
+			     std::unordered_map<U64, bool> &cache_table, int unknown = -1);
 
 	void allocate();
 	void release();
@@ -114,7 +113,6 @@ public:
 
 private:
 	UC history[STONES + 1];
-	bool allocated;
 	GBIT bitboards[4][BOARD_SIZE];
 
 	void copy(const BitBoard &copy_board);
@@ -123,6 +121,8 @@ private:
 	int count_actions(bool is_player, int gomoku_type);
 	bool check_action(bool is_player, int gomoku_type, UC action);
 };
+
+int vct(BitBoard &board, int max_depth, double max_time);
 
 #ifdef BOARD_TEST
 class TestBoard

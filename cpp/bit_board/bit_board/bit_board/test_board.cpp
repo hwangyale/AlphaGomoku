@@ -147,24 +147,24 @@ int main()
 		getchar();
 	}*/
 
-	int N = 1, act;
+	int N = 10000, act;
 	double count = 0;
 	clock_t start = clock();
 	srand(0);
 	for (int i = 0; i < N; i++)
 	{
-		BitBoard board;
+		BitBoard *board = new BitBoard(true);
 		GetAction actionGenerator;
-		while (!board.is_over)
+		while (!board->is_over)
 		{
 			act = actionGenerator.next();
 			//std::cout << "action: " << act << std::endl;
-			board.move(act);
+			board->move(act);
 			count += 1.0;
 		}
 	}
 	printf("move number: %.0f\n", count);
-	printf("average move time: %.4f\n", (double)((clock() - start) / count));
+	printf("average move time: %.4fms\n", (double)((clock() - start) / count));
 	TEST.print();
 	return 0;
 }

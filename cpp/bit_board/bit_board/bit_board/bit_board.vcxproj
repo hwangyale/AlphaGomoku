@@ -115,7 +115,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;BOARD_TEST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;VCT_TEST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -152,7 +152,9 @@
     <ClCompile Include="gomoku_table.cpp" />
     <ClCompile Include="table.cpp" />
     <ClCompile Include="test_board.cpp" />
+    <ClCompile Include="test_functions.cpp" />
     <ClCompile Include="test_gomoku_table.cpp" />
+    <ClCompile Include="test_vct.cpp" />
     <ClCompile Include="vct.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

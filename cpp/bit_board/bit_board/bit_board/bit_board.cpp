@@ -12,7 +12,6 @@ void BitBoard::allocate()
 {
 	if (!allocated)
 	{
-		//std::cout << "allocated!" << std::endl;
 		int shared_index;
 		if (SHARED_INDEX_HEAD != SHARED_INDEX_TAIL)
 		{
@@ -34,7 +33,6 @@ void BitBoard::release()
 {
 	if (allocated)
 	{
-		//std::cout << "released!" << std::endl;
 		SHARED_INDEX_QUEUE[SHARED_INDEX_TAIL] = gomoku_indice[0] / GOMOKU_TYPE_CONTAINER;
 		SHARED_INDEX_TAIL = (SHARED_INDEX_TAIL + 1) % MAX_BOARD;
 		allocated = false;
@@ -43,7 +41,6 @@ void BitBoard::release()
 
 BitBoard::~BitBoard()
 {
-	//std::cout << "destruct!" << std::endl;
 	release();
 }
 
@@ -134,7 +131,7 @@ void BitBoard::copy(const BitBoard &copyboard)
 
 	if (gomoku_indice[10] != gomoku_indice[0])
 	{
-		memcpy(SHARED_GOMOKU_TYPES + gomoku_indice[0], SHARED_ACTIONS + copyboard.gomoku_indice[0],
+		memcpy(SHARED_GOMOKU_TYPES + gomoku_indice[0], SHARED_GOMOKU_TYPES + copyboard.gomoku_indice[0],
 			   (gomoku_indice[10] - gomoku_indice[0]) * sizeof(UC));
 		memcpy(SHARED_DIRECTIONS + gomoku_indice[0], SHARED_DIRECTIONS + copyboard.gomoku_indice[0],
 			   (gomoku_indice[10] - gomoku_indice[0]) * sizeof(UC));
@@ -259,6 +256,9 @@ void BitBoard::move(UC action)
 	int row = (int)(action / BOARD_SIZE), col = (int)(action % BOARD_SIZE);
 	int center;
 	int color = (int)(player == WHITE);
+
+	if (step % 2 == 0 && player != BLACK) printf("player error!\n");
+	if (step % 2 == 1 && player != WHITE) printf("player error!\n");
 
 	for (UC direction = 0; direction < 4; direction++)
 	{

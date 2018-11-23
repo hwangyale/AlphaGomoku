@@ -12,7 +12,7 @@ int gomoku_pointers[2][5], action_pointers[2][5], hash_counts[2][5];
 
 GomokuTypeTable GOMOKU_TYPE_TABLE;
 
-void check(int cache_counts[RANGE], int cache_actions[RANGE], GBIT &line, int max_empty_count, int center, int color)
+void check(int cache_counts[RANGE], int cache_actions[RANGE], GBIT &line, int max_empty_count, int center, bool color)
 {
 	int empty_count, tmp_action, delta, opponent = player_mapping(color);
 	for (int i = 0; i < RANGE; i++)
