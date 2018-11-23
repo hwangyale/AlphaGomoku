@@ -99,6 +99,10 @@ void BitBoard::check_gomoku_type()
 	static UC gomoku_directions[GOMOKU_TYPE_CONTAINER];
 	static std::bitset<STONES> searched[4];
 	static std::bitset<STONES> stored;
+	static UC open_actions[GOMOKU_TYPE_CONTAINER];
+	static UC open_directions[GOMOKU_TYPE_CONTAINER];
+	static int open_count;
+	static std::bitset<STONES> block_searched[4];
 	
 	memcpy(tmp_gomoku_indice, gomoku_indice, sizeof(tmp_gomoku_indice));
 	memcpy(gomoku_types, SHARED_GOMOKU_TYPES + gomoku_indice[0],
@@ -113,6 +117,7 @@ void BitBoard::check_gomoku_type()
 	for (int color = BLACK; color <= WHITE; color++)
 	{
 		int base = color == BLACK ? 0 : 5;
+		open_count = 0;
 		for (int gt = OPEN_FOUR; gt <= OPEN_TWO; gt++)
 		{
 			stored.reset();
@@ -137,6 +142,14 @@ void BitBoard::check_gomoku_type()
 				}
 			}
 
+			if (gt % 2 == 0)
+			{
+				for (int block_direction = 0; block_direction < 4; block_direction++)
+				{
+					block_searched[block_direction].reset();
+				}
+			}
+
 			end_index = tmp_gomoku_indice[base + gt] - tmp_gomoku_indice[0];
 			for (index = tmp_gomoku_indice[base + gt - 1] - tmp_gomoku_indice[0];
 				 index < end_index; index++)
@@ -154,6 +167,41 @@ void BitBoard::check_gomoku_type()
 					SHARED_GOMOKU_TYPES[gt_index] = tmp_action;
 					SHARED_DIRECTIONS[gt_index++] = tmp_direction;
 				}
+				else if (gt % 2 == 1 && gt < OPEN_TWO)
+				{
+					open_actions[open_count] = tmp_action;
+					open_directions[open_count++] = tmp_direction;
+				}
+
+				if (gt % 2 == 0)
+				{
+					block_searched[tmp_direction].set(tmp_action);
+				}
+			}
+
+			if (gt % 2 == 0)
+			{
+				for (index = 0; index < open_count; index++)
+				{
+					tmp_action = open_actions[index];
+					tmp_direction = open_directions[index];
+					if (color == opponent && searched[(int)tmp_direction][(int)tmp_action] == 1)
+					{
+						continue;
+					}
+					if (block_searched[(int)tmp_direction][(int)tmp_action] == 1)
+					{
+						continue;
+					}
+					if (check_single_action(*this, (int)tmp_action, (int)tmp_direction,
+											color == player, gt,
+											SHARED_ACTIONS, act_index, act_index, stored))
+					{
+						SHARED_GOMOKU_TYPES[gt_index] = tmp_action;
+						SHARED_DIRECTIONS[gt_index++] = tmp_direction;
+					}
+				}
+				open_count = 0;
 			}
 		}
 	}

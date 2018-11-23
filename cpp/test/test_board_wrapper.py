@@ -21,7 +21,7 @@ while not board.is_over:
             action = actions[0]
         else:
             start = time.time()
-            action = board.vct(100, 3600)
+            action = board.vct(14, 3600)
             print('time: {:.4f}'.format(time.time() - start))
     else:
         actions = board.get_actions(True, OPEN_FOUR) + board.get_actions(True, FOUR)

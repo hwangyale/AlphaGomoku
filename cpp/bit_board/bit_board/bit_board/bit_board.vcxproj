@@ -148,14 +148,19 @@
   <ItemGroup>
     <ClCompile Include="bit_board.cpp" />
     <ClCompile Include="bit_board_type.cpp" />
+    <ClCompile Include="board.cpp" />
     <ClCompile Include="evaluate.cpp" />
     <ClCompile Include="gomoku_table.cpp" />
     <ClCompile Include="table.cpp" />
     <ClCompile Include="test_board.cpp" />
+    <ClCompile Include="test_board_head.cpp" />
     <ClCompile Include="test_functions.cpp" />
     <ClCompile Include="test_gomoku_table.cpp" />
     <ClCompile Include="test_vct.cpp" />
     <ClCompile Include="vct.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="board.i" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

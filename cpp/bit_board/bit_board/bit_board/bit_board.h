@@ -82,6 +82,7 @@ class BitBoard
 public:
 	bool allocated;
 	char player;
+	UC history[STONES + 1];
 	UC step;
 	bool is_over;
 	char winner;
@@ -112,7 +113,6 @@ public:
 	void reset();
 
 private:
-	UC history[STONES + 1];
 	GBIT bitboards[4][BOARD_SIZE];
 
 	void copy(const BitBoard &copy_board);

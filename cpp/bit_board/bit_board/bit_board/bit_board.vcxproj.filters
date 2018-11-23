@@ -53,5 +53,16 @@
     <ClCompile Include="test_functions.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="test_board_head.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="board.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="board.i">
+      <Filter>源文件</Filter>
+    </None>
   </ItemGroup>
 </Project>

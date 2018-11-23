@@ -547,7 +547,7 @@ void generate_actions(int gomoku_type, bool is_player,
 				{
 					continue;
 				}
-				std::cout << is_player << " " << gomoku_type << " " << line << std::endl;
+				//std::cout << is_player << " " << gomoku_type << " " << line << std::endl;
 				color = line[2 * center + 1];
 				action_container[0] = 0;
 				get_action_func(line, center, color, is_open, is_player,
@@ -593,6 +593,7 @@ void generate_actions(int gomoku_type, bool is_player,
 
 void GomokuTypeTable::generate_action_hash_table()
 {
+	printf("|>          |\b\b\b\b\b\b\b\b\b\b\b");
 	for (int is_player = 0; is_player <= 1; is_player++)
 	{
 		for (int gomoku_type = OPEN_FOUR; gomoku_type <= OPEN_TWO; gomoku_type++)
@@ -607,14 +608,17 @@ void GomokuTypeTable::generate_action_hash_table()
 							 gomoku_pointers[is_player][gomoku_type - 1], 
 							 action_pointers[is_player][gomoku_type - 1], 
 							 hash_counts[is_player][gomoku_type - 1]);
+			printf("\b=>");
 		}
 	}
+	printf("\b=|\n");
 }
 
 bool GomokuTypeTable::load()
 {
 	if (freopen("gomoku_hash_table.txt", "r", stdin) == NULL)
 	{
+		freopen("CON", "r", stdin);
 		return false;
 	}
 
@@ -660,6 +664,7 @@ bool GomokuTypeTable::load()
 		}
 	}
 	fclose(stdin);
+	freopen("CON", "r", stdin);
 	return true;
 }
 
@@ -716,6 +721,7 @@ bool GomokuTypeTable::save()
 		}
 	}
 	fclose(stdout);
+	freopen("CON", "w", stdout);
 	return true;
 }
 
@@ -723,6 +729,7 @@ GomokuTypeTable::GomokuTypeTable()
 {
 	if (!load())
 	{
+		std::cout << "loading hashing table failed, generating..." << std::endl;
 		generate_action_hash_table();
 		save();
 	}

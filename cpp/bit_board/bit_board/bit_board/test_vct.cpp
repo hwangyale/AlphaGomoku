@@ -21,7 +21,7 @@ int main()
 		//std::cout << "player: " << (int)board.player << std::endl;
 		//print_potential_actions(board);
 		//std::cout << std::endl;
-		getchar();
+		//getchar();
 	}
 
 	//board.move(5 * 15 + 7);
@@ -43,12 +43,45 @@ int main()
 	//board.move(7 * 15 + 9);
 	//board.move(9 * 15 + 11);
 
-	print_board(board);
+	//board.move(5 * 15 + 7);
+	//board.move(6 * 15 + 4);
+	//board.move(5 * 15 + 4);
+	//board.move(5 * 15 + 3);
+	//print_board(board);
+	//print_potential_actions(board);
+
+	/*print_board(board);
 
 	clock_t start = clock();
 	int vct_action = vct(board, 14, 3600);
 	std::cout << vct_action / BOARD_SIZE << " " << vct_action % BOARD_SIZE << std::endl;
-	printf("time: %.4f\n", (double)(clock() - start));
+	printf("time: %.4f\n", (double)(clock() - start));*/
+
+	UC action;
+	while (!board.is_over)
+	{
+		if (board.player == BLACK)
+		{
+			clock_t start = clock();
+			action = vct(board, 14, 3600);
+			printf("vct time: %.4fms\n", (double)(clock() - start));
+		}
+		else
+		{
+			int row, col;
+			scanf("%d %d", &row, &col);
+			action = row * BOARD_SIZE + col;
+		}
+		if (action < 0)
+		{
+			print_board(board);
+			printf("-1\n");
+			break;
+		}
+		board.move(action);
+		print_board(board);
+		printf("move: %d %d\n", action / BOARD_SIZE, action % BOARD_SIZE);
+	}
 
 	return 0;
 }
