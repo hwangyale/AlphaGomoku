@@ -11,12 +11,18 @@ data_format = K.image_data_format()
 
 
 class NeuralNetworkBase(object):
-    def __init__(self, network, batch_size=128):
+    def __init__(self, network=None, batch_size=128, **kwargs):
         if not isinstance(network, KE.Model):
             raise Exception('`network` must be an instance of Keras Model, '
                             'but got {}'.format(network))
-        self.network = network
+        if network is not None:
+            self.network = network
+        else:
+            self.network = self.initialize_network(**kwargs)
         self.batch_size = batch_size
+
+    def initialize_network(self, **kwargs):
+        raise NotImplementedError('`initialize_network` has not been implemented')
 
     def get_tensors(self, boards):
         boards = tolist(boards)
@@ -58,4 +64,17 @@ class NeuralNetworkBase(object):
         return legal_actions[rng.randint(len(legal_actions))]
 
     def train(self, **kwargs):
-        ## TODO: 
+        raise NotImplementedError('`train` has not been implemented')
+
+    def save_weights(self, suffix, folderpath=''):
+        name = self.generate_name()
+        filename = '{}_{}.hdf5'.format(name, suffix)
+        self.network.save_weights(folderpath + filename)
+
+    def load_weights(self, suffix, folderpath=''):
+        name = self.generate_name()
+        filename = '{}_{}.hdf5'.format(name, suffix)
+        self.network.load_weights(folderpath + filename, by_name=True)
+
+    def generate_name(self):
+        raise NotImplementedError('`generate_name` has not been implemented')
