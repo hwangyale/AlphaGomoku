@@ -1,3 +1,4 @@
+__all__ = ['get_resnet']
 from collections import defaultdict
 import numpy as np
 import keras.backend as K
@@ -43,34 +44,34 @@ def get_resnet(input_shape, stack_nb):
             first_stride = (1, 1)
             projection = _tensor
 
-        _tensor = KL.BatchNormalization(axis=AXIS)(_tensor)
-        _tensor = KL.Activation('relu')(_tensor)
-
-        _tensor = KL.Conv2D(
+        _tensor = get_layer(KL.BatchNormalization, axis=AXIS)(_tensor)
+        _tensor = get_layer(KL.Activation, 'relu')(_tensor)
+        _tensor = get_layer(
+            KL.Conv2D,
             output_filters,
             kernel_size=(3, 3),
             strides=first_stride,
             padding='same',
             kernel_initializer=KI.he_normal(),
-            kernel_regularizer=KR.l2(weight_decay),
-            name=get_conv_name(convolution_count)
+            kernel_regularizer=KR.l2(weight_decay)
         )(_tensor)
-        _tensor = KL.BatchNormalization(axis=AXIS)(_tensor)
-        _tensor = KL.Activation('relu')(_tensor)
 
-        _tensor = KL.Conv2D(
+        _tensor = get_layer(KL.BatchNormalization, axis=AXIS)(_tensor)
+        _tensor = get_layer(KL.Activation, 'relu')(_tensor)
+        _tensor = get_layer(
+            KL.Conv2D,
             output_filters,
             kernel_size=(3, 3),
             strides=(1, 1),
             padding='same',
             kernel_initializer=KI.he_normal(),
-            kernel_regularizer=KR.l2(weight_decay),
-            name=get_conv_name(convolution_count)
+            kernel_regularizer=KR.l2(weight_decay)
         )(_tensor)
 
-        return KL.add([_tensor, projection])
+        return get_layer(KL.add)([_tensor, projection])
 
-    tensor = KL.Conv2D(
+    tensor = get_layer(
+        KL.Conv2D,
         filters=16,
         kernel_size=(3, 3),
         strides=(1, 1),
@@ -91,7 +92,7 @@ def get_resnet(input_shape, stack_nb):
     for _ in range(1, stack_nb):
         tensor = residual_block(tensor, [64, 64])
 
-    tensor = KL.BatchNormalization(axis=AXIS)(tensor)
-    tensor = KL.Activation('relu')(tensor)
-    tensor = KL.GlobalAveragePooling2D()(tensor)
+    tensor = get_layer(KL.BatchNormalization, axis=AXIS)(tensor)
+    tensor = get_layer(KL.Activation, 'relu')(tensor)
+    tensor = get_layer(KL.GlobalAveragePooling2D)(tensor)
     return inputs, tensor
