@@ -1,4 +1,4 @@
-__all__ = ['NeuralNetworkBase']
+__all__ = ['PolicyBase', 'ValueBase', 'MixtureBase']
 import numpy as np
 import keras.backend as K
 import keras.engine as KE

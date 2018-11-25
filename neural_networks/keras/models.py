@@ -23,7 +23,7 @@ class GetLayer(object):
         return cls(*args, **kwargs)
 
 
-def get_resnet(input_shape, stack_nb):
+def get_resnet(input_shape, stack_nb, weight_decay=0.0005):
     inputs = KL.Input(shape=input_shape, name='inputs')
     get_layer = GetLayer()
     def residual_block(_tensor, filters):
