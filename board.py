@@ -126,16 +126,16 @@ class Board(CPPBoard):
 
     def make_board_tensor(self, action=None):
         if action is None:
-            self.tensors = {BLACK: np.zeros((3, BOARD_SIZE, BOARD_SIZE),
-                            dtype=FLOATX)+np.array([[[0]], [[0]], [[1]]]),
-                            WHITE: np.zeros((3, BOARD_SIZE, BOARD_SIZE),
-                            dtype=FLOATX)+np.array([[[0]], [[0]], [[1]]])}
+            self.tensors = {BLACK: np.zeros((BOARD_SIZE, BOARD_SIZE, 3),
+                            dtype=FLOATX)+np.array([[[0, 0, 1]]]),
+                            WHITE: np.zeros((BOARD_SIZE, BOARD_SIZE, 3),
+                            dtype=FLOATX)+np.array([[[0, 0, 1]]])}
             return
         player = self.player
-        self.tensors[player][(0, )+action] = 1.0
-        self.tensors[player_map(player)][(1, )+action] = 1.0
+        self.tensors[player][action+(0, )] = 1.0
+        self.tensors[player_map(player)][action+(1, )] = 1.0
         for tensor in self.tensors.values():
-            tensor[(2, )+action] = 0.0
+            tensor[action+(2, )] = 0.0
 
     @property
     def tensor(self):

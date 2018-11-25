@@ -24,8 +24,8 @@ class Base(object):
     def initialize_network(self, **kwargs):
         raise NotImplementedError('`initialize_network` has not been implemented')
 
-        def train(self, **kwargs):
-            raise NotImplementedError('`train` has not been implemented')
+    def train(self, **kwargs):
+        raise NotImplementedError('`train` has not been implemented')
 
     def get_tensors(self, boards):
         boards = tolist(boards)
@@ -33,12 +33,12 @@ class Base(object):
         shape = tensors[0].shape
         tensors = np.reshape(np.concatenate(tensors), (len(boards), )+shape)
         if data_format == 'channels_first':
-            return tensors
-        elif data_format == 'channels_last':
             dim = len(tensors.shape)
             axes = list(range(dim))
             axes[1], axes[-1] = axes[-1], axes[1]
             return np.transpose(tensors, axes)
+        elif data_format == 'channels_last':
+            return tensors
         else:
             raise Exception('Unknown data format: {}'.format(data_format))
 
@@ -69,7 +69,7 @@ class PolicyBase(Base):
         return tosingleton(actions)
 
     def predict_actions(self, boards):
-        return sample(boards, self.predict(boards))
+        return self.sample(boards, self.predict(boards))
 
     def zero_sum_exception(self, board, legal_actions, probs):
         print('warning: zero sum of legal actions, '
@@ -78,7 +78,22 @@ class PolicyBase(Base):
 
 
 class ValueBase(Base):
+    def value_tolist(self, boards, values):
+        return tosingleton([values[i] for i in range(len(tolist(boards)))])
+
     def predict_values(self, boards):
-        boards = tolist(boards)
-        values = self.predict(boards)
-        return tosingleton([values[i] for i in range(len(boards))])
+        return self.value_tolist(boards, self.predict(boards))
+
+
+class MixtureBase(PolicyBase, ValueBase):
+    def predict_actions(self, boards):
+        distributions, _ = self.predict(boards)
+        return self.sample(boards, distributions)
+
+    def predict_values(self, boards):
+        _, values = self.predict(boards)
+        return self.value_tolist(boards, values)
+
+    def predict_pairs(self, boards):
+        distributions, values = self.predict(boards)
+        return self.sample(boards, distributions), self.value_tolist(boards, values)
