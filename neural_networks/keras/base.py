@@ -10,7 +10,7 @@ rng = np.random
 data_format = K.image_data_format()
 
 
-class NeuralNetworkBase(object):
+class Base(object):
     def __init__(self, network=None, batch_size=128, **kwargs):
         if not isinstance(network, KE.Model):
             raise Exception('`network` must be an instance of Keras Model, '
@@ -23,6 +23,9 @@ class NeuralNetworkBase(object):
 
     def initialize_network(self, **kwargs):
         raise NotImplementedError('`initialize_network` has not been implemented')
+
+        def train(self, **kwargs):
+            raise NotImplementedError('`train` has not been implemented')
 
     def get_tensors(self, boards):
         boards = tolist(boards)
@@ -43,9 +46,16 @@ class NeuralNetworkBase(object):
         tensors = self.get_tensors(boards)
         return self.network.predict(tensors, batch_size=self.batch_size)
 
-    def predict_actions(self, boards):
+    def save_weights(self, filepath):
+        self.network.save_weights(filepath)
+
+    def load_weights(self, filepath):
+        self.network.load_weights(filepath, by_name=True)
+
+
+class PolicyBase(Base):
+    def sample(self, boards, distributions):
         boards = tolist(boards)
-        distributions = self.predict(boards)
         actions = []
         for index, board in enumerate(boards):
             legal_actions = board.get_legal_actions()
@@ -58,23 +68,17 @@ class NeuralNetworkBase(object):
                 actions.append(legal_actions[multinomial_sampling(probs)])
         return tosingleton(actions)
 
+    def predict_actions(self, boards):
+        return sample(boards, self.predict(boards))
+
     def zero_sum_exception(self, board, legal_actions, probs):
         print('warning: zero sum of legal actions, '
               'select an action randomly')
         return legal_actions[rng.randint(len(legal_actions))]
 
-    def train(self, **kwargs):
-        raise NotImplementedError('`train` has not been implemented')
 
-    def save_weights(self, suffix, folderpath=''):
-        name = self.generate_name()
-        filename = '{}_{}.hdf5'.format(name, suffix)
-        self.network.save_weights(folderpath + filename)
-
-    def load_weights(self, suffix, folderpath=''):
-        name = self.generate_name()
-        filename = '{}_{}.hdf5'.format(name, suffix)
-        self.network.load_weights(folderpath + filename, by_name=True)
-
-    def generate_name(self):
-        raise NotImplementedError('`generate_name` has not been implemented')
+class ValueBase(Base):
+    def predict_values(self, boards):
+        boards = tolist(boards)
+        values = self.predict(boards)
+        return tosingleton([values[i] for i in range(len(boards))])
