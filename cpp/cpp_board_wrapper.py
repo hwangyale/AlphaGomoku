@@ -139,12 +139,12 @@ class CPPBoard(object):
     def __str__(self):
         board = self.get_board()
         board_string = ''
-        for i, row in enumerate(board):
+        for i, row in enumerate(board, 1):
             s = '{:2d} '.format(i)
             s += ' '.join([str(col) if col != EMPTY else '_' for col in row])
             board_string += s + '\n'
         board_string += ' ' * 3
-        board_string += ' '.join([str(i) if i < 10 else '1' for i in range(BOARD_SIZE)]) + '\n'
+        board_string += ' '.join([str(i) if i < 10 else '1' for i in range(1, BOARD_SIZE+1)]) + '\n'
         board_string += ' ' * 3
-        board_string += ' '.join([' ' if i < 10 else str(i-10) for i in range(BOARD_SIZE)]) + '\n'
+        board_string += ' '.join([' ' if i < 10 else str(i-10) for i in range(1, BOARD_SIZE+1)]) + '\n'
         return board_string
