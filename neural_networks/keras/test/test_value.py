@@ -2,11 +2,11 @@ import time
 import numpy as np
 from AlphaGomoku.global_constants import *
 from AlphaGomoku.board import Board
-from AlphaGomoku.neural_networks.keras.policy import *
+from AlphaGomoku.neural_networks.keras.value import *
 from AlphaGomoku.utils.generic_utils import ProgBar
 
-policy = ResNetPolicy(stack_nb=1, board_cls=Board, weight_decay=0.0005)
-policy.predict(Board(toTensor=True))
+value = ResNetValue(stack_nb=1, board_cls=Board, weight_decay=0.0005)
+value.predict(Board(toTensor=True))
 
 N = 100
 batch_size = 1000
@@ -28,7 +28,7 @@ for t in range(N):
             boards.append(board)
             progbar.update()
     start = time.time()
-    policy.predict_actions(boards)
+    value.predict_values(boards)
     total_time += time.time() - start
 
-print('average time of predicting an action: {:.4f}'.format(total_time / N / batch_size))
+print('average time of predicting a value: {:.4f}'.format(total_time / N / batch_size))

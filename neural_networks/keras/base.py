@@ -24,8 +24,11 @@ class Base(object):
     def initialize_network(self, **kwargs):
         raise NotImplementedError('`initialize_network` has not been implemented')
 
-    def train(self, **kwargs):
-        raise NotImplementedError('`train` has not been implemented')
+    def compile(self, *args, **kwargs):
+        self.network.compile(*args, **kwargs)
+
+    def fit(self, *args, **kwargs):
+        self.network.fit(*args, **kwargs)
 
     def get_tensors(self, boards):
         boards = tolist(boards)
