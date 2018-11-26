@@ -68,7 +68,7 @@ def get_resnet(input_shape, stack_nb, weight_decay=0.0005):
             kernel_regularizer=KR.l2(weight_decay)
         )(_tensor)
 
-        return get_layer(KL.add)([_tensor, projection])
+        return get_layer(KL.Add)([_tensor, projection])
 
     tensor = get_layer(
         KL.Conv2D,
@@ -77,8 +77,7 @@ def get_resnet(input_shape, stack_nb, weight_decay=0.0005):
         strides=(1, 1),
         padding='same',
         kernel_initializer=KI.he_normal(),
-        kernel_regularizer=KR.l2(weight_decay),
-        name=get_conv_name(convolution_count)
+        kernel_regularizer=KR.l2(weight_decay)
     )(inputs)
 
     for _ in range(0, stack_nb):

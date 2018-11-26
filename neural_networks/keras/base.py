@@ -12,7 +12,7 @@ data_format = K.image_data_format()
 
 class Base(object):
     def __init__(self, network=None, batch_size=128, **kwargs):
-        if not isinstance(network, KE.Model):
+        if network is not None and not isinstance(network, KE.Model):
             raise Exception('`network` must be an instance of Keras Model, '
                             'but got {}'.format(network))
         if network is not None:

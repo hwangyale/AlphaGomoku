@@ -5,7 +5,6 @@ from .global_constants import *
 from .common import *
 from .cpp import CPPBoard
 
-plt.ion()
 
 class Board(CPPBoard):
     def __init__(self, history=[],
@@ -182,7 +181,7 @@ class Board(CPPBoard):
         axes.set_yticks(axis)
         axes.set_xticklabels(['']+[str(i) for i in range(1, BOARD_SIZE+1)]+[''])
         axes.set_yticklabels(['']+[str(i) for i in range(1, BOARD_SIZE+1)]+[''])
-        plt.show()
+        plt.show(block=False)
         if time is None:
             time = self.visualization_time
         plt.pause(time)

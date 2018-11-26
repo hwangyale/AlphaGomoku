@@ -11,7 +11,7 @@ def multinomial_sampling(probs):
     s = random()
     if s <= probs[0]:
         return 0
-    for i, p in enumerate(1, probs):
+    for i, p in enumerate(probs[1:], 1):
         s -= probs[i - 1]
         if s <= probs[i]:
             return i
