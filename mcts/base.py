@@ -133,10 +133,17 @@ class Node(object):
                  self.delete_threshold, self.distributions_pool,
                  self.tuple_table)
 
-    def select(self, thread_index,
+    def select(self, board, thread_index,
                virtual_loss=MCTS_VIRTUAL_LOSS,
                virtual_visit=MCTS_VIRTUAL_VISIT,
                c_puct=MCTS_C_PUCT):
+
+        if self.vct == 0:
+            vct_action = board.vct(MCTS_VCT_DEPTH, MCTS_VCT_TIME)
+            self.vct = -1 if vct_action is None else 1
+        if self.vct == 1:
+            return MCTS_GET_VCT
+
         tuples = self.tuple_table[self.zobristKey]
         nodes = []
         Qs = []
@@ -166,17 +173,25 @@ class Node(object):
                             key=lambda idx: probs[idx])
 
         max_action = actions[max_index]
+        max_node = nodes[max_index]
+        max_node.N += 1
+        max_node.indice2parents[thread_index] = self
+        max_node.W -= virtual_loss
+        max_node.N += virtual_visit
+        return max_action
 
-
+    def update(self, value, thread_index,
+               virtual_loss=MCTS_VIRTUAL_LOSS,
+               virtual_visit=MCTS_VIRTUAL_VISIT):
+        if len(self.indice2parents) > 0:
+            self.W += value
+            self.W += virtual_loss
+            self.N -= virtual_visit
+            parent = self.indice2parents.pop(thread_index)
+            parent.update(-value, thread_index, virtual_loss, virtual_visit)
 
     @property
     def Q(self):
         if self.N > 0:
             return self.W / self.N
         return 0.0
-
-    # def u(self, parent_visit, prior):
-    #     return prior * parent_visit**0.5 / (1 + self.N)
-    #
-    # def value(self, parent_visit, c_puct):
-    #     return self.Q + c_puct * self.u(parent_visit)
