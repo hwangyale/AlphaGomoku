@@ -57,6 +57,35 @@ class MCTSBoard(Board):
             self.bounds = [row - MCTS_BOUND, row + MCTS_BOUND,
                            col - MCTS_BOUND, col + MCTS_BOUND]
 
+    def expand(self):
+        actions = self.get_potential_actions(True, OPEN_FOUR) + \
+                  self.get_potential_actions(True, FOUR)
+        if len(actions) > 0:
+            return list(set(actions)), 1.0
+
+        actions = self.get_potential_actions(False, OPEN_FOUR)
+        if len(actions) > 0:
+            return actions, -1.0
+
+        actions = self.get_potential_actions(False, FOUR)
+        if len(actions) > 0:
+            return actions, None
+
+        actions = self.get_potential_actions(True, OPEN_THREE)
+        if len(actions) > 0:
+            return actions, 1.0
+
+        action = self.vct(MCTS_VCT_DEPTH, MCTS_VCT_TIME)
+        if action is not None:
+            return [action], 1.0
+
+        actions = self.get_potential_actions(False, OPEN_THREE)
+        if len(actions) > 0:
+            return actions, None
+
+        legal_actions = self.get_legal_actions()
+        return [action for action in legal_actions if self.check_legality(action)], None
+
     def check_bound(self, action):
         if len(self.bounds) == 0:
             return True
@@ -77,28 +106,32 @@ class MCTSBoard(Board):
 
         new_board.visualization = False
         new_board.defend = False
+        return new_board
 
 
 class Node(object):
     def __init__(self, zobristKey, node_pool,
                  left_pool, delete_threshold,
-                 distributions_pool, tuple_table):
+                 distribution_pool, tuple_table,
+                 action_table, value_table):
         if zobristKey not in node_pool:
             node_pool[zobristKey] = self
-            self.initialize()
             self.zobristKey = zobristKey
             self.node_pool = node_pool
             self.left_pool = left_pool
             self.delete_threshold = delete_threshold
-            self.distributions_pool = distributions_pool
+            self.distribution_pool = distribution_pool
             self.tuple_table = tuple_table
+            self.action_table = action_table
+            self.value_table = value_table
+            self.initialize()
         elif node_pool[zobristKey].N > delete_threshold:
             left_pool.add(zobristKey)
 
     def initialize(self):
         self.indice2parents = {}
         self.expanded = False
-        self.vct = 0
+        self.value = self.value_table[self.zobristKey]
         self.W = 0.0
         self.N = 0.0
 
@@ -111,9 +144,8 @@ class Node(object):
             raise Exception('Develop expanded node!!')
         zobristKey = self.zobristKey
         if zobristKey not in self.tuple_table:
-            actions = [action for action in board.get_legal_actions()
-                       if board.check_bound(action)]
-            distribution = self.distributions_pool[zobristKey]
+            actions = self.action_table[zobristKey]
+            distribution = self.distribution_pool[zobristKey]
             probs = [distribution[flatten(action)] for action in actions]
             s = sum(probs)
             if s <= 0.0:
@@ -130,19 +162,16 @@ class Node(object):
 
         for key, action, prob in tuples
             Node(key, self.node_pool, self.left_pool,
-                 self.delete_threshold, self.distributions_pool,
-                 self.tuple_table)
+                 self.delete_threshold, self.distribution_pool,
+                 self.tuple_table, self.action_table, self.value_table)
 
     def select(self, board, thread_index,
                virtual_loss=MCTS_VIRTUAL_LOSS,
                virtual_visit=MCTS_VIRTUAL_VISIT,
                c_puct=MCTS_C_PUCT):
 
-        if self.vct == 0:
-            vct_action = board.vct(MCTS_VCT_DEPTH, MCTS_VCT_TIME)
-            self.vct = -1 if vct_action is None else 1
-        if self.vct == 1:
-            return MCTS_GET_VCT
+        if self.value is not None:
+            return None, self.value
 
         tuples = self.tuple_table[self.zobristKey]
         nodes = []
@@ -172,11 +201,13 @@ class Node(object):
 
         max_action = actions[max_index]
         max_node = nodes[max_index]
+        if max_node.N == max_node.delete_threshold:
+            max_node.left_pool.add(max_node.zobristKey)
         max_node.N += 1
         max_node.indice2parents[thread_index] = self
         max_node.W -= virtual_loss
         max_node.N += virtual_visit
-        return max_action
+        return max_action, None
 
     def update(self, value, thread_index,
                virtual_loss=MCTS_VIRTUAL_LOSS,
