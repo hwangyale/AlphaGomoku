@@ -146,8 +146,6 @@ class Node(object):
 
         tuples = self.tuple_table[self.zobristKey]
         nodes = []
-        Qs = []
-        Ns = []
         actions = []
         probs = []
         total_visit = 0.0
