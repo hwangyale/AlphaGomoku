@@ -3,6 +3,7 @@ import threading
 from ..global_constants import *
 from ..board import Board
 from ..utils.thread_utils import RLOCK, CONDITION
+from ..utils.zobrist_utils import get_zobrist_key
 
 
 BASE_BOARD = Board(toTensor=True, visualization=False, defend=False)
@@ -79,14 +80,103 @@ class MCTSBoard(Board):
 
 
 class Node(object):
-    def __init__(self, child_pool, prior=1.0, parent=None, depth=0):
-        self.child_pool = child_pool
-        self.prior = prior
-        self.parent = parent
-        self.depth = depth
-        self.children = []
+    def __init__(self, zobristKey, node_pool,
+                 left_pool, delete_threshold,
+                 distributions_pool, tuple_table):
+        if zobristKey not in node_pool:
+            node_pool[zobristKey] = self
+            self.initialize()
+            self.zobristKey = zobristKey
+            self.node_pool = node_pool
+            self.left_pool = left_pool
+            self.delete_threshold = delete_threshold
+            self.distributions_pool = distributions_pool
+            self.tuple_table = tuple_table
+        elif node_pool[zobristKey].N > delete_threshold:
+            left_pool.add(zobristKey)
+
+    def initialize(self):
+        self.indice2parents = {}
         self.expanded = False
-        self.Q = 0.0
+        self.vct = 0
+        self.W = 0.0
         self.N = 0.0
 
+    def reset(self):
+        self.indice2parents = {}
+        self.expanded = False
+
     def develop(self, board):
+        if self.expanded:
+            raise Exception('Develop expanded node!!')
+        zobristKey = self.zobristKey
+        if zobristKey not in self.tuple_table:
+            actions = [action for action in board.get_legal_actions()
+                       if board.check_bound(action)]
+            distribution = self.distributions_pool[zobristKey]
+            probs = [distribution[flatten(action)] for action in actions]
+            s = sum(probs)
+            if s <= 0.0:
+                probs = self.zero_sum_exception(actions, probs)
+            else:
+                probs = [prob / s for prob in probs]
+            color = board.player
+            keys = [get_zobrist_key(color, action, zobristKey)
+                    for action in actions]
+            tuples = list(zip(keys, actions, probs))
+            self.tuple_table[zobristKey] = tuples
+        else:
+            tuples = self.tuple_table[zobristKey]
+
+        for key, action, prob in tuples
+            Node(key, self.node_pool, self.left_pool,
+                 self.delete_threshold, self.distributions_pool,
+                 self.tuple_table)
+
+    def select(self, thread_index,
+               virtual_loss=MCTS_VIRTUAL_LOSS,
+               virtual_visit=MCTS_VIRTUAL_VISIT,
+               c_puct=MCTS_C_PUCT):
+        tuples = self.tuple_table[self.zobristKey]
+        nodes = []
+        Qs = []
+        Ns = []
+        actions = []
+        probs = []
+        total_visit = 0.0
+        for key, action, prob in tuples:
+            node = self.node_pool[key]
+            nodes.append(node)
+            total_visit += node.N
+            actions.append(action)
+            probs.append(prob)
+
+        if total_visit > 0.0:
+            max_value = -MAX_FLOAT
+            max_index = -MAX_FLOAT
+            for idx in range(len(tuples)):
+                node = nodes[idx]
+                value = node.Q + c_puct * probs[idx] * \
+                        total_visit**0.5 / (1 + node.N)
+                if value > max_value:
+                    max_value = value
+                    max_index = idx
+        else:
+            max_index = max(list(range(len(tuples))),
+                            key=lambda idx: probs[idx])
+
+        max_action = actions[max_index]
+
+
+
+    @property
+    def Q(self):
+        if self.N > 0:
+            return self.W / self.N
+        return 0.0
+
+    # def u(self, parent_visit, prior):
+    #     return prior * parent_visit**0.5 / (1 + self.N)
+    #
+    # def value(self, parent_visit, c_puct):
+    #     return self.Q + c_puct * self.u(parent_visit)
