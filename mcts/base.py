@@ -84,7 +84,7 @@ class MCTSBoard(Board):
             return actions, None
 
         legal_actions = self.get_legal_actions()
-        return [action for action in legal_actions if self.check_legality(action)], None
+        return [action for action in legal_actions if self.check_bound(action)], None
 
     def check_bound(self, action):
         if len(self.bounds) == 0:
@@ -97,7 +97,7 @@ class MCTSBoard(Board):
         new_board = MCTSBoard(initialize=False)
         new_board.cpp_board = CPPBoard.copy().cpp_board
 
-        new_board.legal_actions = copy_board.legal_actions
+        new_board.legal_actions = self.legal_actions
 
         new_board.toTensor = True
         new_board.tensors = {c: t.copy() for c, t in self.tensors.items()}
@@ -131,7 +131,8 @@ class Node(object):
     def initialize(self):
         self.indice2parents = {}
         self.expanded = False
-        self.value = self.value_table[self.zobristKey]
+        self.value = None
+        self.evaluated = False
         self.W = 0.0
         self.N = 0.0
 
@@ -160,7 +161,7 @@ class Node(object):
         else:
             tuples = self.tuple_table[zobristKey]
 
-        for key, action, prob in tuples
+        for key, action, prob in tuples:
             Node(key, self.node_pool, self.left_pool,
                  self.delete_threshold, self.distribution_pool,
                  self.tuple_table, self.action_table, self.value_table)
@@ -169,10 +170,6 @@ class Node(object):
                virtual_loss=MCTS_VIRTUAL_LOSS,
                virtual_visit=MCTS_VIRTUAL_VISIT,
                c_puct=MCTS_C_PUCT):
-
-        if self.value is not None:
-            return None, self.value
-
         tuples = self.tuple_table[self.zobristKey]
         nodes = []
         actions = []
@@ -207,7 +204,7 @@ class Node(object):
         max_node.indice2parents[thread_index] = self
         max_node.W -= virtual_loss
         max_node.N += virtual_visit
-        return max_action, None
+        return max_action
 
     def update(self, value, thread_index,
                virtual_loss=MCTS_VIRTUAL_LOSS,

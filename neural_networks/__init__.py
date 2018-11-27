@@ -1,4 +1,5 @@
 __all__ = ['get_network']
+from .keras import *
 
 def get_network(function, network_type, backend, *args, **kwargs):
     if function not in ['policy', 'value', 'mixture']:
@@ -16,5 +17,4 @@ def get_network(function, network_type, backend, *args, **kwargs):
     }
     cls_name = '{}{}'.format(network_type, function)
     if backend == 'keras':
-        from .keras import *
-        return locals()[cls_name](*args, **kwargs)
+        return globals()['Keras{}'.format(cls_name)](*args, **kwargs)
