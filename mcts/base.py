@@ -1,5 +1,6 @@
-import numpy as np
 import threading
+import queue
+import numpy as np
 from ..global_constants import *
 from ..board import Board
 from ..utils.thread_utils import RLOCK, CONDITION
@@ -58,14 +59,20 @@ class MCTSBoard(Board):
                            col - MCTS_BOUND, col + MCTS_BOUND]
 
     def expand(self):
+        if self.is_over:
+            if self.winner != DRAW:
+                return [], MCTS_LOSS_VALUE
+            else:
+                return [], MCTS_DRAW_VALUE
+
         actions = self.get_potential_actions(True, OPEN_FOUR) + \
                   self.get_potential_actions(True, FOUR)
         if len(actions) > 0:
-            return list(set(actions)), 1.0
+            return list(set(actions)), MCTS_WIN_VALUE
 
         actions = self.get_potential_actions(False, OPEN_FOUR)
         if len(actions) > 0:
-            return actions, -1.0
+            return actions, MCTS_LOSS_VALUE
 
         actions = self.get_potential_actions(False, FOUR)
         if len(actions) > 0:
@@ -73,18 +80,19 @@ class MCTSBoard(Board):
 
         actions = self.get_potential_actions(True, OPEN_THREE)
         if len(actions) > 0:
-            return actions, 1.0
+            return actions, MCTS_WIN_VALUE
 
         action = self.vct(MCTS_VCT_DEPTH, MCTS_VCT_TIME)
         if action is not None:
-            return [action], 1.0
+            return [action], MCTS_WIN_VALUE
 
         actions = self.get_potential_actions(False, OPEN_THREE)
         if len(actions) > 0:
             return actions, None
 
         legal_actions = self.get_legal_actions()
-        return [action for action in legal_actions if self.check_bound(action)], None
+        actions = [action for action in legal_actions if self.check_bound(action)]
+        return actions, None
 
     def check_bound(self, action):
         if len(self.bounds) == 0:
@@ -133,8 +141,10 @@ class Node(object):
         self.expanded = False
         self.value = None
         self.evaluated = False
-        self.W = 0.0
-        self.N = 0.0
+        self.W_r = 0.0
+        self.W_v = 0.0
+        self.N_r = 0.0
+        self.N_v = 0.0
 
     def reset(self):
         self.indice2parents = {}
@@ -177,8 +187,8 @@ class Node(object):
         total_visit = 0.0
         for key, action, prob in tuples:
             node = self.node_pool[key]
+            total_visit += node.N_r + node.N_v
             nodes.append(node)
-            total_visit += node.N
             actions.append(action)
             probs.append(prob)
 
@@ -188,7 +198,7 @@ class Node(object):
             for idx in range(len(tuples)):
                 node = nodes[idx]
                 value = node.Q + c_puct * probs[idx] * \
-                        total_visit**0.5 / (1 + node.N)
+                        total_visit**0.5 / (1 + node.N_r + node.N_v)
                 if value > max_value:
                     max_value = value
                     max_index = idx
@@ -198,26 +208,89 @@ class Node(object):
 
         max_action = actions[max_index]
         max_node = nodes[max_index]
-        if max_node.N == max_node.delete_threshold:
+        if max_node.N_r == max_node.delete_threshold:
             max_node.left_pool.add(max_node.zobristKey)
-        max_node.N += 1
+        max_node.N_r += 1
         max_node.indice2parents[thread_index] = self
-        max_node.W -= virtual_loss
-        max_node.N += virtual_visit
-        return max_action
+        max_node.W_v -= virtual_loss
+        max_node.N_v += virtual_visit
+        board.move(max_action)
+        if not max_node.estimated:
+            if board.zobristKey not in self.value_table:
+                expand_actions, value = board.expand()
+                self.action_table[board.zobristKey] = expand_actions
+                self.value_table[board.zobristKey] = value
+            else:
+                value = self.value_table[board.zobristKey]
+            self.value = value
+            self.estimated = True
+        return max_node
 
     def update(self, value, thread_index,
                virtual_loss=MCTS_VIRTUAL_LOSS,
                virtual_visit=MCTS_VIRTUAL_VISIT):
         if len(self.indice2parents) > 0:
-            self.W += value
-            self.W += virtual_loss
-            self.N -= virtual_visit
+            self.W_r += value
+            self.W_v += virtual_loss
+            self.N_v -= virtual_visit
             parent = self.indice2parents.pop(thread_index)
             parent.update(-value, thread_index, virtual_loss, virtual_visit)
 
     @property
     def Q(self):
-        if self.N > 0:
-            return self.W / self.N
+        if self.N_r + self.N_v > 0:
+            return (self.W_r + self.W_v) / (self.N_r + self.N_v)
         return 0.0
+
+
+class Traversal(threading.Thread):
+    def __init__(self, pairsQueue, boardQueue, completeQueue, root,
+                 get_virtual_value_function, c_puct=MCTS_C_PUCT,
+                 condition=CONDITION, **kwargs):
+        self.pairsQueue = pairsQueue
+        self.boardQueue = boardQueue
+        self.completeQueue = completeQueue
+        self.root = root
+        self.get_virtual_value_function = get_virtual_value_function
+        self.c_puct = c_puct
+        self.condition = condition
+        super(Traversal, self).__init__(**kwargs)
+        self.setDaemon(True)
+        self.start()
+
+    def run(self):
+        pairsQueue = self.pairsQueue
+        boardQueue = self.boardQueue
+        completeQueue = self.completeQueue
+        root = self.root
+        get_virtual_value_function = self.get_virtual_value_function
+        c_puct = self.c_puct
+        condition = condition
+
+        while True:
+            condition.acquire()
+            if pairsQueue.empty():
+                break
+            thread_index, board = pairsQueue.get_nowait()
+            virtual_loss, virtual_visit = get_virtual_value_function(thread_index)
+            condition.release()
+
+            node = root
+            while True:
+                if node.estimated and node.value is not None:
+                    break
+                if not node.expanded:
+                    break
+                condition.acquire()
+                node = node.select(board, thread_index, virtual_loss,
+                                   virtual_visit, c_puct)
+                condition.release()
+
+            if node.value is not None:
+                condition.acquire()
+                node.update(-node.value, thread_index, virtual_loss, virtual_visit)
+                condition.release()
+            else:
+                
+
+        condition.release()
