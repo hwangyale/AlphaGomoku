@@ -71,8 +71,13 @@ class PolicyBase(Base):
                 actions.append(legal_actions[multinomial_sampling(probs)])
         return tosingleton(actions)
 
-    def predict_actions(self, boards):
-        return self.sample(boards, self.predict(boards))
+    def predict_actions(self, boards, sample=True):
+        if sample:
+            return self.sample(boards, self.predict(boards))
+        distributions = self.predict(boards)
+        distributions = [distributions[index, ...] for index
+                         for range(len(tolist(boards)))]
+        return tosingleton(distributions)
 
     def zero_sum_exception(self, board, legal_actions, probs):
         print('warning: zero sum of legal actions, '
@@ -89,14 +94,22 @@ class ValueBase(Base):
 
 
 class MixtureBase(PolicyBase, ValueBase):
-    def predict_actions(self, boards):
+    def predict_actions(self, boards, sample=True):
         distributions, _ = self.predict(boards)
-        return self.sample(boards, distributions)
+        if sample:
+            return self.sample(boards, distributions)
+        distributions = [distributions[index, ...] for index in range(len(tolist(boards)))]
+        return tosingleton(distributions)
 
     def predict_values(self, boards):
         _, values = self.predict(boards)
         return self.value_tolist(boards, values)
 
-    def predict_pairs(self, boards):
+    def predict_pairs(self, boards, sample=True):
         distributions, values = self.predict(boards)
-        return self.sample(boards, distributions), self.value_tolist(boards, values)
+        if sample:
+            return self.sample(boards, distributions), \
+                   self.value_tolist(boards, values)
+        distributions = [distributions[index, ...]
+                         for index in range(len(tolist(boards)))]
+        return tosingleton(distributions), self.value_tolist(boards, values)
