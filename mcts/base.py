@@ -305,28 +305,28 @@ class EvaluationTraversal(threading.Thread):
             lock.release()
 
 
-class EvaluationUpdate(threading.Thread):
-    def __init__(self, tupleQueue, evaluationQueue,
-                 updateQueue, get_virtual_value_function,
-                 lock=RLOCK, start=True, **kwargs):
-        self.tupleQueue = tupleQueue
-        self.evaluationQueue = self.evaluationQueue
-        self.updateQueue = updateQueue
-        self.get_virtual_value_function = get_virtual_value_function
-        self.lock = lock
-        super(EvaluationUpdate, self).__init__(**kwargs)
-        self.setDaemon(True)
-        if start:
-            self.start()
-
-    def run(self):
-        tupleQueue = self.tupleQueue
-        evaluationQueue = self.evaluationQueue
-        updateQueue = self.updateQueue
-        get_virtual_value_function = self.get_virtual_value_function
-        lock = self.lock
-
-        while True:
+# class EvaluationUpdate(threading.Thread):
+#     def __init__(self, tupleQueue, evaluationQueue,
+#                  updateQueue, get_virtual_value_function,
+#                  lock=RLOCK, start=True, **kwargs):
+#         self.tupleQueue = tupleQueue
+#         self.evaluationQueue = self.evaluationQueue
+#         self.updateQueue = updateQueue
+#         self.get_virtual_value_function = get_virtual_value_function
+#         self.lock = lock
+#         super(EvaluationUpdate, self).__init__(**kwargs)
+#         self.setDaemon(True)
+#         if start:
+#             self.start()
+#
+#     def run(self):
+#         tupleQueue = self.tupleQueue
+#         evaluationQueue = self.evaluationQueue
+#         updateQueue = self.updateQueue
+#         get_virtual_value_function = self.get_virtual_value_function
+#         lock = self.lock
+#
+#         while True:
 
 
 class EvaluationMCTSBase(object):
@@ -378,20 +378,35 @@ class EvaluationMCTSBase(object):
             self.threads.append(thread)
         return updateQueue
 
-    def update(self, tuples):
-        if len(tuples) == 0:
-            return
+    def update_nowait(self, tuples, get_virtual_value_function, progbar=None):
+        left_indice = []
+        for idx, (index, board, node) in enumerate(tuples):
+            if node.value is not None:
+                virtual_loss, virtual_visit = get_virtual_value_function(index)
+                node.update(-node.value, index,
+                            virtual_loss, virtual_visit)
+                if progbar is not None:
+                    progbar.update()
+                continue
+            left_indice.append(idx)
+        return left_indice
 
-    def update(self, updateQueue, verbose=1):
+    def expand_and_update(self, tuples):
+
+
+    def mcts(self, board, verbose=1):
+        updateQueue = self.traverse(board, True)
         traverse_time = self.traverse_time
         node_pool = self.node_pool
         left_pool = self.left_pool
         lock = self.lock
 
-        count = 0
         if verbose:
             progbar = ProgBar(traverse_time)
             progbar.initialize()
+        else:
+            progbar = None
+        total_count = 0
         while True:
             tuples = []
             lock.acquire()
@@ -400,35 +415,29 @@ class EvaluationMCTSBase(object):
             if len(tuples) == 0:
                 lock.release()
                 continue
-            indice = []
-            boards = []
-            nodes = []
-            for index, board, node in tuples:
-                if node.value is not None:
-                    virtual_loss, virtual_visit = get_virtual_value_function(index)
-                    node.update(-node.value, index,
-                                virtual_loss, virtual_visit)
-                    count += 1
-                    if verbose:
-                        progbar.update()
-                    continue
-                indice.append(index)
-                boards.append(board)
-                nodes.append(node)
-
-            values = self.evaluate(boards)
-            for idx, node in enumerate(nodes):
-                node.develop(boards[idx])
-                index = indice[idx]
-                virtual_loss, virtual_visit = get_virtual_value_function(index)
-                node.update(-values[idx], index, virtual_loss, virtual_visit)
-                count += 1
-                if verbose:
-                    progbar.update()
-
-            lock.release()
-            if count == traverse_time:
+            left_indice = self.update_nowait(tuples, get_virtual_value_function,
+                                             progbar)
+            total_count += len(tuples) - len(left_indice)
+            if total_count == traverse_time:
+                lock.release()
                 break
+            elif len(left_indice) == 0:
+                lock.release()
+                continue
+
+            # values = self.evaluate(boards)
+            # for idx, node in enumerate(nodes):
+            #     node.develop(boards[idx])
+            #     index = indice[idx]
+            #     virtual_loss, virtual_visit = get_virtual_value_function(index)
+            #     node.update(-values[idx], index, virtual_loss, virtual_visit)
+            #     count += 1
+            #     if verbose:
+            #         progbar.update()
+            #
+            # lock.release()
+            # if count == traverse_time:
+            #     break
 
         action = self.process_root(root)
 
