@@ -9,7 +9,7 @@ def get_zobrist_table():
     zobrist_table = {}
     for color in [BLACK, WHITE]:
         for action in range(BOARD_SIZE**2):
-            zobrist_table[(color, action)] = np.random.randint(2**31 - 1) + 1
+            zobrist_table[(color, unflatten(action))] = np.random.randint(2**31 - 1) + 1
     return zobrist_table
 
 def code_json_dict(zobrist_table):

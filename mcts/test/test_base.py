@@ -3,7 +3,9 @@ from AlphaGomoku.neural_networks import get_network
 from AlphaGomoku.board import Board
 
 mixture = get_network('mixture', 'resnet', 'keras', stack_nb=1)
-mcts = EvaluationMCTSBase(mixture, 100, thread_number=4, delete_threshold=10)
+mcts = EvaluationMCTSBase(mixture, 500, thread_number=4, delete_threshold=10)
 
-board = Board(visualization=False)
-mcts.mcts(board, verbose=1)
+board = Board(visualization=True)
+while not board.is_over:
+    action = mcts.mcts(board, 1)
+    board.move(action)

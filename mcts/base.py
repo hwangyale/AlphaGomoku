@@ -2,9 +2,10 @@ import threading
 import queue
 import numpy as np
 from ..global_constants import *
+from ..common import *
 from ..board import Board
 from ..cpp import CPPBoard
-from ..utils.thread_utils import CONDITION, RLOCK
+from ..utils.thread_utils import CONDITION
 from ..utils.zobrist_utils import get_zobrist_key, hash_history
 from ..utils.generic_utils import ProgBar
 
@@ -72,20 +73,20 @@ class MCTSBoard(Board):
             else:
                 return [], MCTS_DRAW_VALUE
 
-        actions = self.get_potential_actions(True, OPEN_FOUR) + \
-                  self.get_potential_actions(True, FOUR)
+        actions = self.get_actions(True, OPEN_FOUR) + \
+                  self.get_actions(True, FOUR)
         if len(actions) > 0:
             return list(set(actions)), MCTS_WIN_VALUE
 
-        actions = self.get_potential_actions(False, OPEN_FOUR)
+        actions = self.get_actions(False, OPEN_FOUR)
         if len(actions) > 0:
             return actions, MCTS_LOSS_VALUE
 
-        actions = self.get_potential_actions(False, FOUR)
+        actions = self.get_actions(False, FOUR)
         if len(actions) > 0:
             return actions, None
 
-        actions = self.get_potential_actions(True, OPEN_THREE)
+        actions = self.get_actions(True, OPEN_THREE)
         if len(actions) > 0:
             return actions, MCTS_WIN_VALUE
 
@@ -93,7 +94,7 @@ class MCTSBoard(Board):
         if action is not None:
             return [action], MCTS_WIN_VALUE
 
-        actions = self.get_potential_actions(False, OPEN_THREE)
+        actions = self.get_actions(False, OPEN_THREE)
         if len(actions) > 0:
             return actions, None
 
@@ -144,14 +145,14 @@ class Node(object):
             self.action_table = action_table
             self.value_table = value_table
             self.initialize()
-        elif node_pool[zobristKey].N > delete_threshold:
+        elif node_pool[zobristKey].N_r > delete_threshold:
             left_pool.add(zobristKey)
 
     def initialize(self):
         self.indice2parents = {}
         self.expanded = False
         self.value = None
-        self.evaluated = False
+        self.estimated = False
         self.W_r = 0.0
         self.W_v = 0.0
         self.N_r = 0.0
@@ -163,7 +164,7 @@ class Node(object):
 
     def develop(self, board, distribution):
         if self.expanded:
-            raise Exception('Develop expanded node!!')
+            raise Exception('Develop expanded node: {}!!'.format(self))
         zobristKey = self.zobristKey
         if zobristKey not in self.tuple_table:
             actions = self.action_table[zobristKey]
@@ -185,6 +186,7 @@ class Node(object):
             Node(key, self.node_pool, self.left_pool,
                  self.delete_threshold, self.tuple_table,
                  self.action_table, self.value_table)
+        self.expanded = True
 
     def select(self, board, thread_index, virtual_loss=None,
                virtual_visit=None, c_puct=None):
@@ -230,7 +232,11 @@ class Node(object):
         max_node.W_v -= virtual_loss
         max_node.N_v += virtual_visit
         board.move(max_action)
-        if not max_node.estimated:
+        max_node.estimate(board)
+        return max_node
+
+    def estimate(self, board):
+        if not self.estimated:
             if board.zobristKey not in self.value_table:
                 expand_actions, value = board.expand()
                 self.action_table[board.zobristKey] = expand_actions
@@ -239,7 +245,6 @@ class Node(object):
                 value = self.value_table[board.zobristKey]
             self.value = value
             self.estimated = True
-        return max_node
 
     def update(self, value, thread_index,
                virtual_loss=None, virtual_visit=None):
@@ -269,13 +274,13 @@ class Node(object):
 class EvaluationTraversal(threading.Thread):
     def __init__(self, traversalQueue, updateQueue,
                  root, get_virtual_value_function,
-                 c_puct=None, lock=None, start=True, **kwargs):
+                 c_puct=None, condition=None, start=True, **kwargs):
         self.traversalQueue = traversalQueue
         self.updateQueue = updateQueue
         self.root = root
         self.get_virtual_value_function = get_virtual_value_function
         self.c_puct = MCTS_C_PUCT if c_puct is None else c_puct
-        self.lock = RLOCK if lock is None else lock
+        self.condition = CONDITION if condition is None else condition
         super(EvaluationTraversal, self).__init__(**kwargs)
         self.setDaemon(True)
         if start:
@@ -287,35 +292,34 @@ class EvaluationTraversal(threading.Thread):
         root = self.root
         get_virtual_value_function = self.get_virtual_value_function
         c_puct = self.c_puct
-        lock = self.lock
+        condition = self.condition
 
         while True:
-            lock.acquire()
+            condition.acquire()
             if traversalQueue.empty():
+                condition.release()
                 break
             thread_index, board = traversalQueue.get_nowait()
             virtual_loss, virtual_visit = get_virtual_value_function(thread_index)
-            lock.release()
+            condition.release()
 
             node = root
             while True:
-                lock.acquire()
-                if node.estimated and node.value is not None:
-                    updateQueue.put_nowait((thread_index, board, node))
-                    break
+                condition.acquire()
                 if not node.expanded:
                     updateQueue.put_nowait((thread_index, board, node))
+                    condition.wait()
+                    condition.release()
                     break
                 node = node.select(board, thread_index, virtual_loss,
                                    virtual_visit, c_puct)
-                lock.release()
-            lock.release()
+                condition.release()
 
 
 class EvaluationMCTSBase(object):
     def __init__(self, mixture_network,
                  traverse_time, c_puct=None, thread_number=4,
-                 delete_threshold=10, lock=None):
+                 delete_threshold=10, condition=None):
         self.mixture_network = mixture_network
         self.traverse_time = traverse_time
         self.c_puct = MCTS_C_PUCT if c_puct is None else c_puct
@@ -326,53 +330,45 @@ class EvaluationMCTSBase(object):
         self.tuple_table = {}
         self.action_table = {}
         self.value_table = {}
-        self.lock = RLOCK if lock is None else lock
+        self.condition = CONDITION if condition is None else condition
         self.threads = []
 
     def traverse(self, board, start=True):
         board = MCTSBoard(board, True)
-        traverse_time = self.traverse_time
-        c_puct = self.c_puct
-        thread_number = self.thread_number
-        delete_threshold = self.delete_threshold
-        node_pool = self.node_pool
-        left_pool = self.left_pool
-        tuple_table = self.tuple_table
-        action_table = self.action_table
-        value_table = self.value_table
-        lock = self.lock
+        condition = self.condition
 
         traversalQueue = queue.Queue()
         updateQueue = queue.Queue()
-        for index in range(traverse_time):
+        for index in range(self.traverse_time):
             traversalQueue.put_nowait((index, board.copy()))
 
-        root = Node(board.zobristKey, node_pool, left_pool,
-                    delete_threshold,  tuple_table, action_table,
-                    value_table)
+        Node(board.zobristKey, self.node_pool, self.left_pool,
+             self.delete_threshold, self.tuple_table, self.action_table,
+             self.value_table)
+        root = self.node_pool[board.zobristKey]
+        root.estimate(board)
 
-        get_virtual_value_function = self.get_virtual_value_function()
-        for _ in range(thread_number):
+        for _ in range(self.thread_number):
             thread = EvaluationTraversal(traversalQueue, updateQueue, root,
-                                         get_virtual_value_function, c_puct,
-                                         start=start)
+                                         self.get_virtual_value_function, self.c_puct,
+                                         self.condition, start)
             self.threads.append(thread)
-        return updateQueue
+        return root, updateQueue
 
-    def update_nowait(self, tuples, get_virtual_value_function, progbar=None):
+    def update_nowait(self, tuples, progbar=None):
         left_tuples = []
         for index, board, node in tuples:
             if node.value is not None:
-                virtual_loss, virtual_visit = get_virtual_value_function(index)
+                virtual_loss, virtual_visit = self.get_virtual_value_function(index)
                 node.update(-node.value, index,
                             virtual_loss, virtual_visit)
                 if progbar is not None:
                     progbar.update()
                 continue
-            left_tuples.apppend((index, board, node))
+            left_tuples.append((index, board, node))
         return left_tuples
 
-    def expand_and_update(self, tuples, get_virtual_value_function, progbar=None):
+    def expand_and_update(self, tuples, progbar=None):
         indice = []
         boards = []
         nodes = []
@@ -385,19 +381,19 @@ class EvaluationMCTSBase(object):
         values = tolist(values)
 
         for idx, node in enumerate(nodes):
-            node.develop(boards[idx], distributions[idx])
+            if not node.expanded:
+                node.develop(boards[idx], distributions[idx])
             index = indice[idx]
-            virtual_loss, virtual_visit = get_virtual_value_function(index)
+            virtual_loss, virtual_visit = self.get_virtual_value_function(index)
             node.update(-values[idx], index, virtual_loss, virtual_visit)
-            if verbose is not None:
+            if progbar is not None:
                 progbar.update()
 
     def mcts(self, board, verbose=1):
-        updateQueue = self.traverse(board, True)
         traverse_time = self.traverse_time
         node_pool = self.node_pool
         left_pool = self.left_pool
-        lock = self.lock
+        condition = self.condition
 
         if verbose:
             progbar = ProgBar(traverse_time)
@@ -405,28 +401,32 @@ class EvaluationMCTSBase(object):
         else:
             progbar = None
         total_count = 0
+        root, updateQueue = self.traverse(board, True)
         while True:
             tuples = []
-            lock.acquire()
+            condition.acquire()
             while not updateQueue.empty():
                 tuples.append(updateQueue.get_nowait())
             if len(tuples) == 0:
-                lock.release()
+                condition.release()
                 continue
-            left_tuples = self.update_nowait(tuples, get_virtual_value_function,
-                                             progbar)
+            left_tuples = self.update_nowait(tuples, progbar)
             total_count += len(tuples) - len(left_tuples)
             if total_count == traverse_time:
-                lock.release()
+                condition.notifyAll()
+                condition.release()
                 break
             elif len(left_tuples) == 0:
-                lock.release()
+                condition.notifyAll()
+                condition.release()
                 continue
 
-            self.expand_and_update(left_tuples, get_virtual_value_function, progbar)
+            self.expand_and_update(left_tuples, progbar)
             total_count += len(left_tuples)
-            lock.release()
+            condition.notifyAll()
+            condition.release()
             if total_count == traverse_time:
+                self.threads.clear()
                 break
 
         action = self.process_root(root)
@@ -442,7 +442,7 @@ class EvaluationMCTSBase(object):
 
     def process_root(self, root):
         zobristKey = root.zobristKey
-        tuples = self.tuples_table[zobristKey]
+        tuples = self.tuple_table[zobristKey]
         max_action = None
         max_visit = 0.0
         for key, action, _ in tuples:
@@ -450,4 +450,8 @@ class EvaluationMCTSBase(object):
             if node.N_r > max_visit:
                 max_visit = node.N_r
                 max_action = action
+        print('visit time: {}'.format(int(max_visit)))
         return max_action
+
+    def get_virtual_value_function(self, index):
+        return MCTS_VIRTUAL_LOSS, MCTS_VIRTUAL_VISIT
