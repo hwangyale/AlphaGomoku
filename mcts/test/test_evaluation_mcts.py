@@ -1,4 +1,4 @@
-from AlphaGomoku.mcts.base import EvaluationMCTSBase
+from AlphaGomoku.mcts.evaluation_mcts import EvaluationMCTSBase
 from AlphaGomoku.neural_networks import get_network
 from AlphaGomoku.board import Board
 
