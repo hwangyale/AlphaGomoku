@@ -14,7 +14,7 @@ def get_network(function, network_type, backend, *args, **kwargs):
     function = function[0].capitalize() + function[1:]
     network_type = {
         'resnet': 'ResNet'
-    }
+    }[network_type]
     cls_name = '{}{}'.format(network_type, function)
     if backend == 'keras':
         return globals()['Keras{}'.format(cls_name)](*args, **kwargs)

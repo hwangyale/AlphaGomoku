@@ -75,8 +75,8 @@ class PolicyBase(Base):
         if sample:
             return self.sample(boards, self.predict(boards))
         distributions = self.predict(boards)
-        distributions = [distributions[index, ...] for index
-                         for range(len(tolist(boards)))]
+        distributions = [distributions[index, ...]
+                         for index in range(len(tolist(boards)))]
         return tosingleton(distributions)
 
     def zero_sum_exception(self, board, legal_actions, probs):
