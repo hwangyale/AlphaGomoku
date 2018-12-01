@@ -141,3 +141,6 @@ venv.bak/
 
 # igore backup
 __backup__
+
+# igore raw data
+__raw_data__
