@@ -13,6 +13,6 @@ class ResNetValue(ValueBase):
         board = Board(toTensor=True)
         resnet_inputs, resnet_outputs = get_resnet(board.tensor.shape,
                                                    stack_nb, weight_decay)
-        resnet_outputs = KL.Dense(1, activation='tanh',
-                                  name='value')(resnet_outputs)
-        return KE.Model(resnet_inputs, resnet_outputs)
+        tensor = KL.GlobalAveragePooling2D(name='global_pooling')(resnet_outputs)
+        outputs = KL.Dense(1, activation='tanh', name='value')(tensor)
+        return KE.Model(resnet_inputs, outputs)

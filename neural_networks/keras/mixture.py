@@ -1,6 +1,7 @@
 __all__ = ['ResNetMixture']
 import keras.layers as KL
 import keras.engine as KE
+import keras.initializers as KI
 from ...global_constants import *
 from ...board import Board
 from .base import MixtureBase
@@ -13,7 +14,16 @@ class ResNetMixture(MixtureBase):
         board = Board(toTensor=True)
         resnet_inputs, resnet_outputs = get_resnet(board.tensor.shape,
                                                    stack_nb, weight_decay)
-        distributions = KL.Dense(BOARD_SIZE**2, activation='softmax',
-                                 name='distribution')(resnet_outputs)
-        values = KL.Dense(1, activation='tanh', name='value')(resnet_outputs)
+        tensor = KL.Conv2D(
+            filters=1,
+            kernel_size=(1, 1),
+            strides=(1, 1),
+            padding='same',
+            kernel_initializer=KI.he_normal(),
+            activation='softmax',
+            name='unflattened_distribution')(resnet_outputs)
+        distributions = KL.Flatten(name='distribution')(tensor)
+
+        tensor = KL.GlobalAveragePooling2D(name='global_pooling')(resnet_outputs)
+        values = KL.Dense(1, activation='tanh', name='value')(tensor)
         return KE.Model(resnet_inputs, [distributions, values])

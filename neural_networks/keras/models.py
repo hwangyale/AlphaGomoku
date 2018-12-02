@@ -30,18 +30,16 @@ def get_resnet(input_shape, stack_nb, weight_decay=0.0005):
         increase_filter = filters[0] != filters[1]
         output_filters = filters[1]
         if increase_filter:
-            first_stride = (2, 2)
             projection = get_layer(
                 KL.Conv2D,
                 output_filters,
                 kernel_size=(1, 1),
-                strides=(2, 2),
+                strides=(1, 1),
                 padding='same',
                 kernel_initializer=KI.he_normal(),
                 kernel_regularizer=KR.l2(weight_decay)
             )(_tensor)
         else:
-            first_stride = (1, 1)
             projection = _tensor
 
         _tensor = get_layer(KL.BatchNormalization, axis=AXIS)(_tensor)
@@ -50,7 +48,7 @@ def get_resnet(input_shape, stack_nb, weight_decay=0.0005):
             KL.Conv2D,
             output_filters,
             kernel_size=(3, 3),
-            strides=first_stride,
+            strides=(1, 1),
             padding='same',
             kernel_initializer=KI.he_normal(),
             kernel_regularizer=KR.l2(weight_decay)
@@ -93,5 +91,5 @@ def get_resnet(input_shape, stack_nb, weight_decay=0.0005):
 
     tensor = get_layer(KL.BatchNormalization, axis=AXIS)(tensor)
     tensor = get_layer(KL.Activation, 'relu')(tensor)
-    tensor = get_layer(KL.GlobalAveragePooling2D)(tensor)
+    # tensor = get_layer(KL.GlobalAveragePooling2D)(tensor)
     return inputs, tensor

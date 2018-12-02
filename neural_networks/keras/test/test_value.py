@@ -8,7 +8,7 @@ from AlphaGomoku.utils.generic_utils import ProgBar
 value = ResNetValue(stack_nb=1, board_cls=Board, weight_decay=0.0005)
 value.predict(Board(toTensor=True))
 
-N = 100
+N = 10
 batch_size = 1000
 total_time = 0.0
 progbar = ProgBar(N * batch_size)

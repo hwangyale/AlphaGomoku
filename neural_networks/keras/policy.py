@@ -1,6 +1,7 @@
 __all__ = ['ResNetPolicy']
 import keras.layers as KL
 import keras.engine as KE
+import keras.initializers as KI
 from ...global_constants import *
 from ...board import Board
 from .base import PolicyBase
@@ -13,6 +14,13 @@ class ResNetPolicy(PolicyBase):
         board = Board(toTensor=True)
         resnet_inputs, resnet_outputs = get_resnet(board.tensor.shape,
                                                    stack_nb, weight_decay)
-        resnet_outputs = KL.Dense(BOARD_SIZE**2, activation='softmax',
-                                  name='distribution')(resnet_outputs)
-        return KE.Model(resnet_inputs, resnet_outputs)
+        tensor = KL.Conv2D(
+            filters=1,
+            kernel_size=(1, 1),
+            strides=(1, 1),
+            padding='same',
+            kernel_initializer=KI.he_normal(),
+            activation='softmax',
+            name='unflattened_distribution')(resnet_outputs)
+        outputs = KL.Flatten(name='distribution')(tensor)
+        return KE.Model(resnet_inputs, outputs)
