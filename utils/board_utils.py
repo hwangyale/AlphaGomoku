@@ -120,3 +120,43 @@ tensor_functions = [
     flip_row_tensor, flip_col_tensor,
     flip_diag_tensor, flip_back_diag_tensor
 ]
+
+recover_action_functions = {
+    rotate0_action: rotate0_action,
+    rotate90_action: rotate270_action,
+    rotate180_action: rotate180_action,
+    rotate270_action: rotate90_action,
+    flip_row_action: flip_row_action,
+    flip_col_action: flip_col_action,
+    flip_diag_action: flip_diag_action,
+    flip_back_diag_action: flip_back_diag_action,
+
+    rotate0_tensor: rotate0_action,
+    rotate90_tensor: rotate270_action,
+    rotate180_tensor: rotate180_action,
+    rotate270_tensor: rotate90_action,
+    flip_row_tensor: flip_row_action,
+    flip_col_tensor: flip_col_action,
+    flip_diag_tensor: flip_diag_action,
+    flip_back_diag_tensor: flip_back_diag_action
+}
+
+recover_tensor_functions = {
+    rotate0_action: rotate0_tensor,
+    rotate90_action: rotate270_tensor,
+    rotate180_action: rotate180_tensor,
+    rotate270_action: rotate90_tensor,
+    flip_row_action: flip_row_tensor,
+    flip_col_action: flip_col_tensor,
+    flip_diag_action: flip_diag_tensor,
+    flip_back_diag_action: flip_back_diag_tensor,
+
+    rotate0_tensor: rotate0_tensor,
+    rotate90_tensor: rotate270_tensor,
+    rotate180_tensor: rotate180_tensor,
+    rotate270_tensor: rotate90_tensor,
+    flip_row_tensor: flip_row_tensor,
+    flip_col_tensor: flip_col_tensor,
+    flip_diag_tensor: flip_diag_tensor,
+    flip_back_diag_tensor: flip_back_diag_tensor
+}
