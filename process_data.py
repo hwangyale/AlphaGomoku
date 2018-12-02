@@ -39,19 +39,41 @@ def check_legality(history):
     return board.is_over
 
 def process_history(container, check=True):
-    pairs = set()
+    pairs = []
     table = set()
     for history in container:
         if check and not check_legality(history):
             print('ignore illegal history')
             continue
-        board = Board(toTensor=True, visualization=False)
+        boards = [Board(toTensor=True, visualization=False) for _ in action_functions]
+        get_value_idxs = []
         for row, col, t, *_ in history:
-            action = (row, col)
-            if t <= FILTER_TIME:
-                board.move(action, check_legality=True, visualization=False)
-                continue
-            tensor = board.tensor
-            for action_func, tensor_func in zip(action_functions, tensor_functions):
-                temp_action = action_func(action)
-                temp_tensor = tensor_func(tensor)
+            actions = [func((row, col)) for func in action_functions]
+            if t > FILTER_TIME:
+                flag = True
+                for board, action in zip(boards, actions):
+                    if (board.zobristKey, action) in table:
+                        flag = False
+                        break
+                if flag:
+                    get_value_idxs.append(len(pairs))
+                    pairs.append((boards[0].history[:], actions[0]))
+                    table.add((boards[0].zobristKey, actions[0]))
+            for board, action in zip(boards, actions):
+                board.move(action, check_legality=(not check))
+        if not boards[0].is_over:
+            raise Exception('Unfinished history: {}'.format(boards[0].history))
+        winner = boards[0].winner
+        for idx in get_value_idxs:
+            if winner == DRAW:
+                value = NETWORK_DRAW_VALUE
+            else:
+                history = pairs[idx][0]
+                if (len(history) % 2 == 0 and winner == BLACK) or \
+                    (len(history) % 2 == 1 and winner == WHITE):
+                    value = NETWORK_WIN_VALUE
+                else:
+                    value = NETWORK_LOSS_VALUE
+            pairs[idx] = pairs[idx] + (value, )
+
+    return pairs
