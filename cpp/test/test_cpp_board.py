@@ -1,3 +1,4 @@
+import time
 from AlphaGomoku.cpp import CPPBoard
 
 # board = cpp_board.Board(cpp_board.IntVector([112, 97, 127]))
@@ -33,7 +34,9 @@ step = 0
 while not board.is_over:
     step += 1
     if step % 2 == 1:
+        start = time.time()
         action = board.vct(12, 100)
+        print('vct time: {:.4f}'.format(time.time() - start))
     else:
         print(board)
         print('player: {}'.format(board.player))
