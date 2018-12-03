@@ -4,6 +4,7 @@ import keras.backend as K
 import keras.engine as KE
 from ...common import *
 from ...board import Board
+from ...utils.json_utils import json_load_tuple, json_dump_tuple
 
 
 rng = np.random
@@ -53,7 +54,29 @@ class Base(object):
         self.network.save_weights(filepath)
 
     def load_weights(self, filepath):
+        if not os.path.exists(filepath):
+            print('not found weight file, the weights saved')
+            self.save_weights(filepath)
         self.network.load_weights(filepath, by_name=True)
+
+    def get_config(self):
+        network_config = self.network.get_config()
+        return {'batch_size': self.batch_size, 'network_config': network_config}
+
+    @classmethod
+    def from_config(cls, config):
+        network_config = config.pop('network_config')
+        network = KE.Model.from_config(network_config)
+        return cls(network=network, **config)
+
+    def save_config(self, file_path):
+        config = self.get_config()
+        json_dump_tuple(config, file_path)
+
+    @classmethod
+    def load_config(cls, file_path):
+        config = json_load_tuple(file_path)
+        return cls.from_config(config)
 
 
 class PolicyBase(Base):
