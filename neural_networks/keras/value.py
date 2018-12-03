@@ -15,4 +15,4 @@ class ResNetValue(ValueBase):
                                                    stack_nb, weight_decay)
         tensor = KL.GlobalAveragePooling2D(name='global_pooling')(resnet_outputs)
         outputs = KL.Dense(1, activation='tanh', name='value')(tensor)
-        return KE.Model(resnet_inputs, outputs)
+        return KE.Model(resnet_inputs, outputs, name='resnet_value')

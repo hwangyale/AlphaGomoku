@@ -12,7 +12,7 @@ zero_train_path = os.path.join(path, 'zero_train_path')
 if not os.path.exists(zero_train_path):
     os.mkdir(zero_train_path)
 
-def get_config_file(pattern, network_name, epoch):
+def get_config_file(pattern, network_name, index):
     folder = {
         'pre': pre_train_path,
         'rl': rl_train_path,
@@ -22,9 +22,9 @@ def get_config_file(pattern, network_name, epoch):
     if folder is None:
         raise Exception('Unknown pattern: {}'.format(pattern))
 
-    return os.path.join(folder, '{}_{}.json'.format(network_name, epoch))
+    return os.path.join(folder, '{}_{}.json'.format(network_name, index))
 
-def get_weight_file(pattern, network_name, epoch):
+def get_weight_file(pattern, network_name, index):
     folder = {
         'pre': pre_train_path,
         'rl': rl_train_path,
@@ -34,4 +34,4 @@ def get_weight_file(pattern, network_name, epoch):
     if folder is None:
         raise Exception('Unknown pattern: {}'.format(pattern))
 
-    return os.path.join(folder, '{}_{}.npz'.format(network_name, epoch))
+    return os.path.join(folder, '{}_{}.npz'.format(network_name, index))

@@ -26,4 +26,5 @@ class ResNetMixture(MixtureBase):
 
         tensor = KL.GlobalAveragePooling2D(name='global_pooling')(resnet_outputs)
         values = KL.Dense(1, activation='tanh', name='value')(tensor)
-        return KE.Model(resnet_inputs, [distributions, values])
+        return KE.Model(resnet_inputs, [distributions, values],
+                        name='resnet_mixture')

@@ -1,8 +1,10 @@
+import os
 import numpy as np
 import keras.optimizers as KO
 import keras.callbacks as KC
 from ...utils.json_utils import json_dump_tuple, json_load_tuple
 from ...temp import get_cache_folder, remove_folder
+from .weights import get_config_file, get_weight_file
 
 def optimizer_wrapper(optimizer):
     if not isinstance(optimizer, KO.Optimizer):
@@ -22,36 +24,72 @@ def optimizer_wrapper(optimizer):
     return optimizer
 
 class CacheCallback(KC.Callback):
-    def __init__(self, config_file, weight_file,
-                 optimizer_config_file, optimizer_weight_file,
-                 train_config_file):
-        self.config_file = config_file
-        self.weight_file = weight_file
-        self.optimizer_config_file = optimizer_config_file
-        self.optimizer_weight_file = optimizer_weight_file
-        self.train_config_file = train_config_file
-        self.train_params = {}
-
-    def set_train_params(self, **kwargs):
-        self.train_params.update(kwargs)
+    def __init__(self, save_function):
+        self.save_function = save_function
 
     def on_train_begin(self, logs=None):
-        self.save()
+        self.save_function()
 
     def on_epoch_end(self, logs=None):
-        self.train_params['initial_epoch'] += 1
-        self.save()
+        self.save_function()
 
-    def save(self):
-        config = self.model.get_config()
-        json_dump_tuple(config, self.config_file)
-        self.model.save_weights(self.weight_file)
+class Trainer(object):
+    def __init__(self, network, index, data_file, **kwargs):
+        self.network = network
+        self.index = index
+        self.data_file = data_file
+        self.optimizer_params = {
+            'class_name': kwargs.get('optimizer', KO.SGD.__name__),
+            'config': kwargs.get('optimizer_config',
+                                 {'lr': 0.01, 'momentum': 0.9, 'nesterov': True})
+        }
+        self.compile_params = {
+            'loss': self.get_loss(),
+            'metrics': kwargs.get('metrics', ['acc']),
+            'loss_weights': self.get_loss_weights()
+        }
+        self.train_params = {
+            'steps_per_epoch': kwargs.get('steps_per_epoch', 128),
+            'epochs': kwargs.get('epochs', 16),
+            'verbose': kwargs.get('verbose', 1),
+            'initial_epoch': kwargs.get('initial_epoch', 0)
+        }
+        self.compiled = False
 
-        optimizer_config = self.optimizer.get_config()
-        json_dump_tuple(optimizer_config, self.optimizer_config_file)
-        self.optimizer.save_weights(self.optimizer_weight_file)
+    def compile(self):
+        optimizer = KO.get(self.optimizer_params)
+        self.network.compile(optimizer=optimizer, **self.optimizer_params)
+        self.compiled = True
 
-        json_dump_tuple(self.train_params, self.train_config_file)
+    def train(self, cache=True):
+        if not self.compiled:
+            self.compile()
+        generator = self.get_generator()
+        validation_data = self.get_validation_data()
+        kwargs = {'generator': generator, 'validation_data': validation_data}
+        kwargs.update(self.train_params)
+        if cache:
+            folder = self.get_cache_folder()
+            json_dump_tuple(self.optimizer_params, os.path.join())
+        return self.network.fit_generator(**kwargs)
+
+    @classmethod
+    def from_cache(self):
+
+    def get_loss(self):
+        raise Exception('Not implemented')
+
+    def get_loss_weights(self):
+        raise Exception('Not implemented')
+
+    def get_generator(self):
+        raise Exception('Not implemented')
+
+    def get_validation_data(self):
+        return None
+
+    def get_cache_folder(self):
+        raise Exception('Not implemented')
 
 def train(network, generator, optimizer, loss,
           batch_size=128, epochs=10, verbose=1,
