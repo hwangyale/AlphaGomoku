@@ -3,6 +3,7 @@ from .global_constants import *
 from .board import Board
 from .utils.zobrist_utils import hash_history, get_zobrist_key
 from .utils.board_utils import action_functions, tensor_functions
+from .utils.generic_utils import ProgBar
 
 FILTER_TIME = 2
 
@@ -41,9 +42,12 @@ def check_legality(history):
 def process_history(container, check=True):
     tuples = []
     table = set()
+    progbar = ProgBar(len(container))
+    progbar.initialize()
     for history in container:
         if check and not check_legality(history):
             print('ignore illegal history')
+            progbar.update()
             continue
         boards = [Board(toTensor=True, visualization=False) for _ in action_functions]
         get_value_idxs = []
@@ -76,4 +80,6 @@ def process_history(container, check=True):
                     value = NETWORK_LOSS_VALUE
             tuples[idx] = tuples[idx] + (value, )
 
+        progbar.update()
+        
     return tuples
