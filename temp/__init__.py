@@ -1,4 +1,4 @@
-__all__ = ['get_cache_folder', 'get_file_path']
+__all__ = ['get_cache_folder', 'get_file_path', 'remove_folder']
 import os
 
 path = os.path.dirname(os.path.realpath(__file__))
@@ -12,6 +12,8 @@ def get_path(folder_path, file_name):
     return os.path.join(folder_path, file_name)
 
 def remove_folder(folder_path):
+    if not os.path.exists(folder_path):
+        return
     for root, dirs, files in os.walk(folder_path):
         for file in files:
             os.remove(os.path.join(root, file))

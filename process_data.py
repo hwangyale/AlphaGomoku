@@ -39,7 +39,7 @@ def check_legality(history):
     return board.is_over
 
 def process_history(container, check=True):
-    pairs = []
+    tuples = []
     table = set()
     for history in container:
         if check and not check_legality(history):
@@ -56,8 +56,8 @@ def process_history(container, check=True):
                         flag = False
                         break
                 if flag:
-                    get_value_idxs.append(len(pairs))
-                    pairs.append((boards[0].history[:], actions[0]))
+                    get_value_idxs.append(len(tuples))
+                    tuples.append((boards[0].history[:], actions[0]))
                     table.add((boards[0].zobristKey, actions[0]))
             for board, action in zip(boards, actions):
                 board.move(action, check_legality=(not check))
@@ -68,12 +68,12 @@ def process_history(container, check=True):
             if winner == DRAW:
                 value = NETWORK_DRAW_VALUE
             else:
-                history = pairs[idx][0]
+                history = tuples[idx][0]
                 if (len(history) % 2 == 0 and winner == BLACK) or \
                     (len(history) % 2 == 1 and winner == WHITE):
                     value = NETWORK_WIN_VALUE
                 else:
                     value = NETWORK_LOSS_VALUE
-            pairs[idx] = pairs[idx] + (value, )
+            tuples[idx] = tuples[idx] + (value, )
 
-    return pairs
+    return tuples
