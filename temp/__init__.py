@@ -12,4 +12,10 @@ def get_path(folder_path, file_name):
     return os.path.join(folder_path, file_name)
 
 def remove_folder(folder_path):
-    def recursive(_folder):
+    for root, dirs, files in os.walk(folder_path):
+        for file in files:
+            os.remove(os.path.join(root, file))
+    for root, dirs, files in os.walk(folder_path, False, lambda x: x):
+        for dir in dirs:
+            os.rmdir(os.path.join(root, dir))
+    os.rmdir(root)
