@@ -270,7 +270,8 @@ void BitBoard::move(UC action)
 		}
 		if (!flag)
 		{
-			flag = check_five(line, center, color);
+			GBIT &mask = TABLE.get_mask(action, direction);
+			flag = check_five(mask & line, center, color);
 		}
 	}
 
