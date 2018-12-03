@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from .global_constants import *
 from .common import *
 from .cpp import CPPBoard
+from .utils.zobrist_utils import get_zobrist_key
 
 
 class Board(CPPBoard):
@@ -38,6 +39,8 @@ class Board(CPPBoard):
         self.defend_vct_depth = defend_vct_depth
         self.defend_vct_time = defend_vct_time
 
+        self._zobristKey = 0
+
         for action in history:
             self.move(action, False, False)
 
@@ -49,6 +52,7 @@ class Board(CPPBoard):
         self.legal_actions ^= BINARY_HEPLERS[flatten(action)]
         if self.toTensor:
             self.make_board_tensor(action)
+        self._zobristKey = get_zobrist_key(self.player, action, self._zobristKey)
         self.cpp_board.move(flatten(action))
         if self.visualization and visualization:
             self.visualize()
@@ -161,6 +165,8 @@ class Board(CPPBoard):
         new_board.attack_vct_time = self.attack_vct_time
         new_board.defend_vct_depth = self.defend_vct_depth
         new_board.defend_vct_time = self.defend_vct_time
+
+        new_board._zobristKey = self._zobristKey
         return new_board
 
     def visualize(self, time=None):
@@ -186,3 +192,7 @@ class Board(CPPBoard):
             time = self.visualization_time
         plt.pause(time)
         plt.cla()
+
+    @property
+    def zobristKey(self):
+        return self._zobristKey

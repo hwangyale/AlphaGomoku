@@ -29,7 +29,7 @@ class MCTSBoard(Board):
 
             self.visualization = False
             self.defend = False
-            self._zobristKey = hash_history(board.history)
+            self._zobristKey = copy_board._zobristKey
 
     def initialize_tensor(self):
         tensors = {BLACK: np.zeros((BOARD_SIZE, BOARD_SIZE, 3),
@@ -59,8 +59,6 @@ class MCTSBoard(Board):
         else:
             self.bounds = [row - MCTS_BOUND, row + MCTS_BOUND,
                            col - MCTS_BOUND, col + MCTS_BOUND]
-        self._zobristKey = get_zobrist_key(player_map(self.player), action,
-                                           self._zobristKey)
 
     def expand(self):
         if self.is_over:
@@ -121,10 +119,6 @@ class MCTSBoard(Board):
 
         new_board._zobristKey = self._zobristKey
         return new_board
-
-    @property
-    def zobristKey(self):
-        return self._zobristKey
 
 
 class Node(object):
