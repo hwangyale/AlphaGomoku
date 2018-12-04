@@ -61,7 +61,7 @@ class TrainerBase(object):
             'loss_weights': self.get_loss_weights()
         }
         self.train_params = {
-            'steps_per_epoch': kwargs.get('steps_per_epoch', 128),
+            'batch_size': kwargs.get('batch_size', 128),
             'epochs': kwargs.get('epochs', 16),
             'verbose': kwargs.get('verbose', 1),
             'initial_epoch': kwargs.get('initial_epoch', 0)
@@ -70,24 +70,25 @@ class TrainerBase(object):
 
     def compile(self):
         self.optimizer = optimizer_wrapper(KO.get(self.optimizer_params))
-        self.network.compile(optimizer=optimizer, **self.optimizer_params)
+        self.network.compile(optimizer=self.optimizer, **self.optimizer_params)
         self.network._make_train_function()
         self.compiled = True
 
     def train(self, cache=True):
         if not self.compiled:
             self.compile()
-        generator = self.get_generator(cache=cache,
-                                       batch_size=self.train_params['batch_size'])
-        validation_data = self.get_validation_data(cache=cache)
-        kwargs = {'generator': generator, 'validation_data': validation_data}
+        generator, steps_per_epoch = self.get_generator(cache=cache,
+                                     batch_size=self.train_params['batch_size'])
+        validation_data = self.get_validation_data()
+        kwargs = {'generator': generator, 'steps_per_epoch': steps_per_epoch,
+                  'validation_data': validation_data}
         kwargs.update(self.train_params)
         if cache:
-            folder = self.get_cache_folder()
             json_dump_tuple(self.trainer_params, self.get_trainer_path())
             json_dump_tuple(self.optimizer_params, self.get_optimizer_path()[0])
             json_dump_tuple(self.compile_params, self.get_compile_path())
             json_dump_tuple(self.network.get_config(), self.get_network_path()[0])
+            folder = self.get_cache_folder()
             kwargs['callbacks'] = [CacheCallback(self.get_begin_save(),
                                    self.get_epoch_save(), folder)]
         return self.network.fit_generator(**kwargs).history
@@ -97,6 +98,9 @@ class TrainerBase(object):
             self.train_config_file = self.get_train_path()
             self.optimizer_weight_file = self.get_optimizer_path()[1]
             self.network_weight_file = self.get_network_path()[1]
+            json_dump_tuple(self.train_params, self.train_config_file)
+            self.optimizer.save_weights(self.optimizer_weight_file)
+            self.network.save_weights(self.network_weight_file)
         return save
 
     def get_epoch_save(self):
@@ -117,9 +121,9 @@ class TrainerBase(object):
         trainer.compile_params.update(json_load_tuple(trainer.get_compile_path()))
         optimizer_config_file, optimizer_weight_file = trainer.get_optimizer_path()
         trainer.optimizer_params.update(json_load_tuple(optimizer_config_file))
-        trainer.train_params.update(json_load_tuple(trainer.get_train_path()))
         trainer.compile()
         trainer.optimizer.load_weights(optimizer_weight_file)
+        trainer.train_params.update(json_load_tuple(trainer.get_train_path()))
         return trainer
 
     def get_loss(self):
@@ -139,7 +143,7 @@ class TrainerBase(object):
 
     def load_cache_tuples(self):
         folder = self.get_cache_folder()
-        file_name = '{}_tuple_container.json'.format(self.trainer_params['network_name'])
+        file_name = 'tuple_container.json'
         tuple_container_file = os.path.join(folder, file_name)
         self.tuple_container = json_load_tuple(tuple_container_file)
 
@@ -154,37 +158,35 @@ class TrainerBase(object):
             self.tuple_container = [train_tuple_container, test_tuple_container]
             if cache:
                 folder = self.get_cache_folder()
-                file_name = '{}_tuple_container.json'.format(self.trainer_params['network_name'])
+                file_name = 'tuple_container.json'
                 tuple_container_file = os.path.join(folder, file_name)
                 json_dump_tuple(self.tuple_container, tuple_container_file)
 
     def get_trainer_path(self):
-        file_name = '{}_config.json'.format(self.trainer_params['network_name'])
+        file_name = 'config.json'
         return os.path.join(self.get_cache_folder(), file_name)
 
     def get_compile_path(self):
-        file_name = '{}_compile_config.json'.format(self.trainer_params['network_name'])
+        file_name = 'compile_config.json'
         return os.path.join(self.get_cache_folder(), file_name)
 
     def get_optimizer_path(self):
-        network_name = self.train_params['network_name']
-        config_file_name = '{}_optimizer_config.json'.format(network_name)
-        weight_file_name = '{}_optimizer_weights.npz'.format(network_name)
+        config_file_name = 'optimizer_config.json'
+        weight_file_name = 'optimizer_weights.npz'
         folder = self.get_cache_folder()
         return os.path.join(folder, config_file_name), \
                os.path.join(folder, weight_file_name)
 
     def get_network_path(self):
-        network_name = self.train_params['network_name']
-        config_file_name = '{}_config.json'.format(network_name)
-        weight_file_name = '{}_weights.npz'.format(network_name)
+        config_file_name = 'network_config.json'
+        weight_file_name = 'network_weights.npz'
         folder = self.get_cache_folder()
         return os.path.join(folder, config_file_name), \
                os.path.join(folder, weight_file_name)
 
     def get_train_path(self):
-        config_file_name = '{}_train_config.json'.format(self.params['network_name'])
-        return os.path.join(self.get_cache_folder, config_file_name)
+        config_file_name = 'train_config.json'
+        return os.path.join(self.get_cache_folder(), config_file_name)
 
     def get_tensor_from_history(self, history):
         tensor = np.zeros((BOARD_SIZE, BOARD_SIZE, 3), dtype=FLOATX) \
@@ -231,12 +233,12 @@ class PrePolicyTrainer(TrainerBase):
                         y[flatten(action_func(action))] = 1.0
                         Ys.append(y)
                     yield np.concatenate(Xs, axis=0), np.concatenate(Ys, axis=0)
-        return generator()
+        return generator(), (len(pairs) + batch_size - 1) // batch_size
 
     def get_validation_data(self):
         test_tuple_container = self.tuple_container[1]
         if len(test_tuple_container) == 0:
-            return self.validation_data = None
+            return None
         pairs = [(self.get_tensor_from_history(history), action)
                  for history, action in test_tuple_container]
         Xs = []
@@ -250,4 +252,6 @@ class PrePolicyTrainer(TrainerBase):
         return np.concatenate(Xs, axis=0), np.concatenate(Ys, axis=0)
 
     def get_cache_folder(self):
-        return get_cache_folder('pre_policy')
+        get_cache_folder('pre_policy')
+        return get_cache_folder('pre_policy\\{}'
+                                .format(self.trainer_params['network_name']))
