@@ -214,7 +214,7 @@ class PrePolicyTrainer(TrainerBase):
         self.load_tuples(cache, split)
         train_tuple_container = self.tuple_container[0]
         pairs = [(self.get_tensor_from_history(history), action)
-                 for history, action in train_tuple_container]
+                 for history, action, _ in train_tuple_container]
         def generator():
             number = len(pairs)
             batches = KE.training._make_batches(number, batch_size)
@@ -224,15 +224,13 @@ class PrePolicyTrainer(TrainerBase):
                 np.random.shuffle(indice)
                 for batch_begin, batch_end in batches:
                     Xs = []
-                    Ys = []
-                    for index in indice[batch_begin:batch_end]:
+                    Ys = np.zeros((batch_end-batch_begin, BOARD_SIZE**2), dtype=FLOATX)
+                    for idx, index in enumerate(indice[batch_begin:batch_end]):
                         tensor, action = pairs[index]
                         tensor_func, action_func = random.choice(function_pairs)
                         Xs.append(np.expand_dims(tensor_func(tensor), 0))
-                        y = np.zero((1, BOARD_SIZE**2))
-                        y[flatten(action_func(action))] = 1.0
-                        Ys.append(y)
-                    yield np.concatenate(Xs, axis=0), np.concatenate(Ys, axis=0)
+                        Ys[idx, flatten(action_func(action))] = 1.0
+                    yield np.concatenate(Xs, axis=0), Ys
         return generator(), (len(pairs) + batch_size - 1) // batch_size
 
     def get_validation_data(self):
@@ -240,13 +238,13 @@ class PrePolicyTrainer(TrainerBase):
         if len(test_tuple_container) == 0:
             return None
         pairs = [(self.get_tensor_from_history(history), action)
-                 for history, action in test_tuple_container]
+                 for history, action, _ in test_tuple_container]
         Xs = []
         Ys = []
         for tensor_func, action_func in zip(tensor_functions, action_functions):
             for tensor, action in pairs:
                 Xs.append(np.expand_dims(tensor_func(tensor), 0))
-                y = np.zeros((1, BOARD_SIZE**2))
+                y = np.zeros((1, BOARD_SIZE**2), dtype=FLOATX)
                 y[flatten(action_func(action))] = 1.0
                 Ys.append(y)
         return np.concatenate(Xs, axis=0), np.concatenate(Ys, axis=0)
@@ -254,4 +252,55 @@ class PrePolicyTrainer(TrainerBase):
     def get_cache_folder(self):
         get_cache_folder('pre_policy')
         return get_cache_folder('pre_policy\\{}'
+                                .format(self.trainer_params['network_name']))
+
+
+class PreValueTrainer(TrainerBase):
+    def get_loss(self):
+        return 'mean_squared_error'
+
+    def get_loss_weights(self):
+        return None
+
+    def get_generator(self, cache, batch_size, split):
+        self.load_tuples(cache, split)
+        train_tuple_container = self.tuple_container[0]
+        pairs = [(self.get_tensor_from_history(history), value)
+                 for history, _, value in train_tuple_container]
+        def generator():
+            number = len(pairs)
+            batches = KE.training._make_batches(number, batch_size)
+            while True:
+                indice = list(range(number))
+                np.random.shuffle(indice)
+                for batch_begin, batch_end in batches:
+                    Xs = []
+                    Ys = np.zeros((batch_end-batch_begin, 1), dtype=FLOATX)
+                    for idx, index in enumerate(indice[batch_begin:batch_end]):
+                        tensor, value = pairs[index]
+                        tensor_func = random.choice(tensor_functions)
+                        Xs.append(np.expand_dims(tensor_func(tensor), 0))
+                        Ys[idx, 0] = value
+                    yield np.concatenate(Xs, axis=0), Ys
+        return generator(), (len(pairs) + batch_size - 1) // batch_size
+
+    def get_validation_data(self):
+        test_tuple_container = self.tuple_container[1]
+        if len(test_tuple_container) == 0:
+            return None
+        pairs = [(self.get_tensor_from_history(history), value)
+                 for history, _, value in test_tuple_container]
+        Xs = []
+        Ys = np.zeros((len(pairs)*len(tensor_functions), 1), dtype=FLOATX)
+        index = 0
+        for tensor_func in tensor_functions:
+            for tensor, value in pairs:
+                Xs.append(np.expand_dims(tensor_func(tensor), 0))
+                Ys[index, 0] = value
+                index += 1
+        return np.concatenate(Xs, axis=0), Ys
+
+    def get_cache_folder(self):
+        get_cache_folder('pre_value')
+        return get_cache_folder('pre_value\\{}'
                                 .format(self.trainer_params['network_name']))
