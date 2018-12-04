@@ -74,14 +74,15 @@ class TrainerBase(object):
         self.network._make_train_function()
         self.compiled = True
 
-    def train(self, cache=True):
+    def train(self, cache=True, split=0.9, **kwargs):
         if not self.compiled:
             self.compile()
-        generator, steps_per_epoch = self.get_generator(cache=cache,
-                                     batch_size=self.train_params['batch_size'])
+        generator, steps_per_epoch = self.get_generator(
+            cache=cache, batch_size=self.train_params['batch_size'], split=split
+        )
         validation_data = self.get_validation_data()
-        kwargs = {'generator': generator, 'steps_per_epoch': steps_per_epoch,
-                  'validation_data': validation_data}
+        kwargs.update({'generator': generator, 'steps_per_epoch': steps_per_epoch,
+                       'validation_data': validation_data})
         kwargs.update(self.train_params)
         if cache:
             json_dump_tuple(self.trainer_params, self.get_trainer_path())
