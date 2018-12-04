@@ -26,7 +26,7 @@ def main():
     weight_file_path = get_weight_file('pre', resnet.name, 0)
 
     trainer.train(True, 0.9, callbacks=callbacks)
-    
+
     json_dump_tuple(resnet.get_config(), config_file_path)
     resnet.save_weights(weight_file_path)
 

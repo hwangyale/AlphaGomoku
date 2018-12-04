@@ -18,8 +18,7 @@ def optimizer_wrapper(optimizer):
 
     def load_weights(self, file_path):
         npz_file = np.load(file_path)
-        self.set_weights([npz_file['arr_{}'.format(i)]
-                          for i in range(len(npz_file))])
+        self.set_weights([npz_file[w] for w in npz_file.files])
 
     def save_weights(self, file_path):
         weights = self.get_weights()
