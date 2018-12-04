@@ -23,4 +23,7 @@ class ResNetPolicy(PolicyBase):
             activation='softmax',
             name='unflattened_distribution')(resnet_outputs)
         outputs = KL.Flatten(name='distribution')(tensor)
-        return KE.Model(resnet_inputs, outputs, name='resnet_policy')
+        model = KE.Model(resnet_inputs, outputs,
+                         name='resnet_{}_policy'.format(6*stack_nb+2))
+        # model.summary()
+        return model

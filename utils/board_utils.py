@@ -68,22 +68,22 @@ def flip_tensor(tensor, pattern, axes=(0, 1)):
         indices = [slice(None)] * len(shape)
         first_dimension = shape[first]
         indices[first] = slice(first_dimension-1, None, -1)
-        return tensor[indices]
+        return tensor[tuple(indices)]
     elif pattern == 1:
         indices = [slice(None)] * len(shape)
         second_dimension = shape[second]
         indices[second] = slice(second_dimension-1, None, -1)
-        return tensor[indices]
+        return tensor[tuple(indices)]
     elif pattern == 2:
         shuffle_axes = list(range(len(shape)))
         shuffle_axes[first], shuffle_axes[second] = shuffle_axes[second], shuffle_axes[first]
         return np.transpose(tensor, shuffle_axes)
     elif pattern == 3:
-        temp_tensor = rotate_tensor(tensor, 3, first, second)
+        temp_tensor = rotate_tensor(tensor, 3, axes)
         shuffle_axes = list(range(len(shape)))
         shuffle_axes[first], shuffle_axes[second] = shuffle_axes[second], shuffle_axes[first]
         temp_tensor = np.transpose(temp_tensor, shuffle_axes)
-        return rotate_tensor(temp_tensor, 1, first, second)
+        return rotate_tensor(temp_tensor, 1, axes)
     else:
         raise Exception('Unknown pattern: {}'.format(pattern))
 
@@ -102,10 +102,10 @@ flip_col_action = lambda action: flip_action(action, 1)
 flip_diag_action = lambda action: flip_action(action, 2)
 flip_back_diag_action = lambda action: flip_action(action, 3)
 
-flip_row_tensor = lambda tensor, axes=(0, 1): flip_action(tensor, 0, axes)
-flip_col_tensor = lambda tensor, axes=(0, 1): flip_action(tensor, 1, axes)
-flip_diag_tensor = lambda tensor, axes=(0, 1): flip_action(tensor, 2, axes)
-flip_back_diag_tensor = lambda tensor, axes=(0, 1): flip_action(tensor, 3, axes)
+flip_row_tensor = lambda tensor, axes=(0, 1): flip_tensor(tensor, 0, axes)
+flip_col_tensor = lambda tensor, axes=(0, 1): flip_tensor(tensor, 1, axes)
+flip_diag_tensor = lambda tensor, axes=(0, 1): flip_tensor(tensor, 2, axes)
+flip_back_diag_tensor = lambda tensor, axes=(0, 1): flip_tensor(tensor, 3, axes)
 
 action_functions = [
     rotate0_action, rotate90_action,

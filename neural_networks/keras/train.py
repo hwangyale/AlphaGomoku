@@ -21,7 +21,7 @@ def optimizer_wrapper(optimizer):
         self.set_weights([npz_file['arr_{}'.format(i)]
                           for i in range(len(npz_file))])
 
-    def save_weights(self, file_path)
+    def save_weights(self, file_path):
         weights = self.get_weights()
         np.savez(file_path, *weights)
 
@@ -38,7 +38,7 @@ class CacheCallback(KC.Callback):
     def on_train_begin(self, logs=None):
         self.begin_save()
 
-    def on_epoch_end(self, logs=None):
+    def on_epoch_end(self, epoch, logs=None):
         self.epoch_save()
 
     def on_train_end(self, logs=None):
@@ -57,7 +57,7 @@ class TrainerBase(object):
         }
         self.compile_params = {
             'loss': self.get_loss(),
-            'metrics': kwargs.get('metrics', ['acc']),
+            'metrics': self.get_metrics(),
             'loss_weights': self.get_loss_weights()
         }
         self.train_params = {
@@ -70,7 +70,7 @@ class TrainerBase(object):
 
     def compile(self):
         self.optimizer = optimizer_wrapper(KO.get(self.optimizer_params))
-        self.network.compile(optimizer=self.optimizer, **self.optimizer_params)
+        self.network.compile(optimizer=self.optimizer, **self.compile_params)
         self.network._make_train_function()
         self.compiled = True
 
@@ -92,6 +92,7 @@ class TrainerBase(object):
             folder = self.get_cache_folder()
             kwargs['callbacks'] = [CacheCallback(self.get_begin_save(),
                                    self.get_epoch_save(), folder)]
+        kwargs.pop('batch_size')
         return self.network.fit_generator(**kwargs).history
 
     def get_begin_save(self):
@@ -116,8 +117,9 @@ class TrainerBase(object):
     def from_cache(cls, network_name):
         trainer = cls(None, network_name, '')
         network_config_file, network_weight_file = trainer.get_network_path()
-        network = KE.from_config(json_load_tuple(network_config_file))
+        network = KE.Model.from_config(json_load_tuple(network_config_file))
         network.load_weights(network_weight_file)
+        trainer.network = network
         trainer.trainer_params.update(json_load_tuple(trainer.get_trainer_path()))
         trainer.compile_params.update(json_load_tuple(trainer.get_compile_path()))
         optimizer_config_file, optimizer_weight_file = trainer.get_optimizer_path()
@@ -128,6 +130,9 @@ class TrainerBase(object):
         return trainer
 
     def get_loss(self):
+        raise Exception('Not implemented')
+
+    def get_metrics(self):
         raise Exception('Not implemented')
 
     def get_loss_weights(self):
@@ -150,8 +155,7 @@ class TrainerBase(object):
 
     def load_tuples(self, cache, split=0.9):
         if not hasattr(self, 'tuple_container'):
-            history_container = json_load_tuple(self.trainer_params['data_file'])
-            tuples = process_history(history_container, False)
+            tuples = json_load_tuple(self.trainer_params['data_file'])
             np.random.shuffle(tuples)
             split_index = int(split * len(tuples))
             train_tuple_container = tuples[:split_index]
@@ -208,6 +212,9 @@ class PrePolicyTrainer(TrainerBase):
     def get_loss(self):
         return 'categorical_crossentropy'
 
+    def get_metrics(self):
+        return ['acc']
+
     def get_loss_weights(self):
         return None
 
@@ -228,7 +235,7 @@ class PrePolicyTrainer(TrainerBase):
                     Ys = np.zeros((batch_end-batch_begin, BOARD_SIZE**2), dtype=FLOATX)
                     for idx, index in enumerate(indice[batch_begin:batch_end]):
                         tensor, action = pairs[index]
-                        tensor_func, action_func = random.choice(function_pairs)
+                        tensor_func, action_func = function_pairs[np.random.randint(8)]
                         Xs.append(np.expand_dims(tensor_func(tensor), 0))
                         Ys[idx, flatten(action_func(action))] = 1.0
                     yield np.concatenate(Xs, axis=0), Ys
@@ -246,7 +253,7 @@ class PrePolicyTrainer(TrainerBase):
             for tensor, action in pairs:
                 Xs.append(np.expand_dims(tensor_func(tensor), 0))
                 y = np.zeros((1, BOARD_SIZE**2), dtype=FLOATX)
-                y[flatten(action_func(action))] = 1.0
+                y[0, flatten(action_func(action))] = 1.0
                 Ys.append(y)
         return np.concatenate(Xs, axis=0), np.concatenate(Ys, axis=0)
 
@@ -259,6 +266,9 @@ class PrePolicyTrainer(TrainerBase):
 class PreValueTrainer(TrainerBase):
     def get_loss(self):
         return 'mean_squared_error'
+
+    def get_metrics(self):
+        return None
 
     def get_loss_weights(self):
         return None
@@ -279,7 +289,7 @@ class PreValueTrainer(TrainerBase):
                     Ys = np.zeros((batch_end-batch_begin, 1), dtype=FLOATX)
                     for idx, index in enumerate(indice[batch_begin:batch_end]):
                         tensor, value = pairs[index]
-                        tensor_func = random.choice(tensor_functions)
+                        tensor_func = tensor_functions[np.random.randint(8)]
                         Xs.append(np.expand_dims(tensor_func(tensor), 0))
                         Ys[idx, 0] = value
                     yield np.concatenate(Xs, axis=0), Ys

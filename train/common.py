@@ -6,9 +6,11 @@ def get_trainer(trainer_cls, network, network_index,
     network_name = '{}_{}'.format(network.name, network_index)
     while True:
         try:
-            from_cache = {'y': True, 'n': False}[input('from cache?[y/n]')]
+            ipt = input('from cache?[y/n]')
+            from_cache = {'y': True, 'n': False}[ipt]
+            break
         except:
-            pass
+            print('illegal input: {}'.format(ipt))
     if from_cache:
         return trainer_cls.from_cache(network_name)
     else:
