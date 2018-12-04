@@ -26,6 +26,7 @@ def process_rec():
 def main(index):
     history_container = process_rec()
     tuples = process_history(history_container, True)
+    print('the number of tuples: {}'.format(len(tuples)))
     json_dump_tuple(tuples, os.path.join(path, 'pre', '{}.json'.format(index)))
 
 if __name__ == '__main__':
