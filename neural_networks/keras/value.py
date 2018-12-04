@@ -29,4 +29,5 @@ class ResNetValue(ValueBase):
         tensor = KL.Flatten(name='flatten')(tensor)
         tensor = KL.Dense(256, activation='relu', name='full_connected_layer')(tensor)
         outputs = KL.Dense(1, activation='tanh', name='value')(tensor)
-        return KE.Model(resnet_inputs, outputs, name='resnet_value')
+        return KE.Model(resnet_inputs, outputs,
+                        name='resnet_{}_value'.format(6*stack_nb+2))
