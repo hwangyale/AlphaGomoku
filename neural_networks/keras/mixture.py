@@ -1,4 +1,5 @@
 __all__ = ['ResNetMixture']
+import keras.backend as K
 import keras.layers as KL
 import keras.engine as KE
 import keras.initializers as KI
@@ -6,6 +7,8 @@ from ...global_constants import *
 from ...board import Board
 from .base import MixtureBase
 from .models import get_resnet
+
+AXIS = 1 if K.image_data_format() == 'channels_first' else -1
 
 class ResNetMixture(MixtureBase):
     def initialize_network(self, stack_nb, board_cls=Board, weight_decay=0.0005):

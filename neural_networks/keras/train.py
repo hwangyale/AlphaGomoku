@@ -314,3 +314,63 @@ class PreValueTrainer(TrainerBase):
         get_cache_folder('pre_value')
         return get_cache_folder('pre_value\\{}'
                                 .format(self.trainer_params['network_name']))
+
+
+class PreMixtureTrainer(TrainerBase):
+    def get_loss(self):
+        return {'distribution': 'categorical_crossentropy',
+                'value': 'mean_squared_error'}
+
+    def get_metrics(self):
+        return {'distribution': 'acc'}
+
+    def get_loss_weights(self):
+        return {'distribution': 1.0, 'value': 1.0}
+
+    def get_generator(self, cache, batch_size, split):
+        self.load_tuples(cache, split)
+        train_tuple_container = self.tuple_container[0]
+        tuples = [(self.get_tensor_from_history(history), action, value)
+                  for history, action, value in train_tuple_container]
+        def generator():
+            number = len(tuples)
+            batches = KE.training._make_batches(number, batch_size)
+            function_pairs = list(zip(tensor_functions, action_functions))
+            while True:
+                indice = list(range(number))
+                np.random.shuffle(indice)
+                for batch_begin, batch_end in batches:
+                    Xs = []
+                    Ys = np.zeros((batch_end-batch_begin, BOARD_SIZE**2), dtype=FLOATX)
+                    Zs = np.zeros((batch_end-batch_begin, 1), dtype=FLOATX)
+                    for idx, index in enumerate(indice[batch_begin:batch_end]):
+                        tensor, action, value = tuples[index]
+                        tensor_func, action_func = function_pairs[np.random.randint(8)]
+                        Xs.append(np.expand_dims(tensor_func(tensor), 0))
+                        Ys[idx, flatten(action_func(action))] = 1.0
+                        Zs[idx, 0] = value
+                    yield np.concatenate(Xs, axis=0), [Ys, Zs]
+        return generator(), (len(tuples) + batch_size - 1) // batch_size
+
+    def get_validation_data(self):
+        test_tuple_container = self.tuple_container[1]
+        if len(test_tuple_container) == 0:
+            return None
+        tuples = [(self.get_tensor_from_history(history), action, value)
+                  for history, action, value in test_tuple_container]
+        Xs = []
+        Ys = np.zeros((len(tuples)*len(tensor_functions), BOARD_SIZE**2), dtype=FLOATX)
+        Zs = np.zeros((len(tuples)*len(tensor_functions), 1), dtype=FLOATX)
+        index = 0
+        for tensor_func, action_func in zip(tensor_functions, action_functions):
+            for tensor, action, value in tuples:
+                Xs.append(np.expand_dims(tensor_func(tensor), 0))
+                Ys[index, flatten(action_func(action))] = 1.0
+                Zs[index, 0] = value
+                index += 1
+        return np.concatenate(Xs, axis=0), [Ys, Zs]
+
+    def get_cache_folder(self):
+        get_cache_folder('pre_mixture')
+        return get_cache_folder('pre_mixture\\{}'
+                                .format(self.trainer_params['network_name']))
