@@ -22,7 +22,7 @@ def get_config_file(pattern, network_name, index):
     if folder is None:
         raise Exception('Unknown pattern: {}'.format(pattern))
 
-    return os.path.join(folder, '{}_{}.json'.format(network_name, index))
+    return os.path.join(folder, '{}_{}_config.json'.format(network_name, index))
 
 def get_weight_file(pattern, network_name, index):
     folder = {
@@ -34,4 +34,4 @@ def get_weight_file(pattern, network_name, index):
     if folder is None:
         raise Exception('Unknown pattern: {}'.format(pattern))
 
-    return os.path.join(folder, '{}_{}.npz'.format(network_name, index))
+    return os.path.join(folder, '{}_{}_weights.npz'.format(network_name, index))
