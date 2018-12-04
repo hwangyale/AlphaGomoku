@@ -20,10 +20,12 @@ def hinted_tuple_hook(obj):
     else:
         return obj
 
-def json_load_tuple(f):
-    obj = json.load(f)
-    return json.loads(obj, object_hook=hinted_tuple_hook)
+def json_load_tuple(file_path):
+    with open(file_path, 'r') as f:
+        obj = json.load(f)
+        return json.loads(obj, object_hook=hinted_tuple_hook)
 
 encoder = TupleEncoder()
-def json_dump_tuple(obj, f):
-    return json.dump(encoder.encode(obj), f)
+def json_dump_tuple(obj, file_path):
+    with open(file_path, 'w') as f:
+        json.dump(encoder.encode(obj), f)
