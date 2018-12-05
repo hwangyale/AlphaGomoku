@@ -62,6 +62,7 @@ class RolloutTraversal(threading.Thread):
                 condition.release()
             condition.acquire()
             updateQueue.put_nowait((thread_index, board, node))
+            condition.wait()
             condition.release()
 
 
@@ -265,7 +266,7 @@ class RolloutMCTSBase(object):
         tree = cls(
             policy_network, rollout_network,
             traverse_time=config['traverse_time'],
-            depth=config['depth'], 
+            depth=config['depth'],
             c_puct=config['c_puct'],
             thread_number=config['thread_number'],
             delete_threshold=config['delete_threshold'],
