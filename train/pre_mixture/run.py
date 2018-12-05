@@ -11,7 +11,7 @@ def main():
     resnet_mixture = ResNetMixture(stack_nb=1)
     resnet = resnet_mixture.network
     trainer = get_trainer(PreMixtureTrainer, resnet, 0, get_data_file('pre', 0),
-                          batch_size=128, epochs=2, verbose=1)
+                          batch_size=128, epochs=200, verbose=1)
     def scheduler(epoch):
         if epoch <= 60:
             return 0.05
