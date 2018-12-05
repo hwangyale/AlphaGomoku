@@ -8,7 +8,7 @@ from AlphaGomoku.data import get_data_file
 from AlphaGomoku.utils.json_utils import json_dump_tuple
 
 def main():
-    resnet_mixture = ResNetMixture(stack_nb=1)
+    resnet_mixture = ResNetMixture(stack_nb=2)
     resnet = resnet_mixture.network
     trainer = get_trainer(PreMixtureTrainer, resnet, 0, get_data_file('pre', 0),
                           batch_size=128, epochs=200, verbose=1)
