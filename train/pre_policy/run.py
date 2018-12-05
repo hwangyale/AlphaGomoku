@@ -8,8 +8,8 @@ from AlphaGomoku.data import get_data_file
 from AlphaGomoku.utils.json_utils import json_dump_tuple
 
 def main():
-    # resnet_policy = ResNetPolicy(stack_nb=1)
-    resnet_policy = UnitizedResNetPolicy(stack_nb=1)
+    resnet_policy = ResNetPolicy(stack_nb=2)
+    # resnet_policy = UnitizedResNetPolicy(stack_nb=1)
     resnet = resnet_policy.network
     trainer = get_trainer(PrePolicyTrainer, resnet, 0, get_data_file('pre', 0),
                           batch_size=128, epochs=200, verbose=1)
