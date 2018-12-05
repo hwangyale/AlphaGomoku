@@ -133,30 +133,43 @@ class RolloutMCTSBase(object):
         rollout_network = self.rollout_network
         boards = [board for index, board, node in tuples]
         players = [board.player for board in boards]
+        winners = [None] * len(boards)
         rollout_boards = set(boards)
         while len(rollout_boards) > 0:
             predict_indice = []
             predict_boards = []
             for idx, board in enumerate(boards):
-                if not board.is_over:
-                    predict_indice.append(idx)
-                    predict_boards.append(board)
+                if board in rollout_boards:
+                    if MCTS_ROLLOUT_VCT_TIME > 0 and \
+                            board.vct(MCTS_ROLLOUT_VCT_DEPTH, MCTS_ROLLOUT_VCT_TIME) is not None:
+                        winners[idx] = board.player
+                        rollout_boards.remove(board)
+                    else:
+                        predict_indice.append(idx)
+                        predict_boards.append(board)
+            if len(predict_indice) == 0:
+                break
             actions = tolist(rollout_network.predict_actions(predict_boards))
             for idx, action in zip(predict_indice, actions):
                 board = boards[idx]
                 board.move(action)
                 if board.is_over:
-                    rollout_boards.remove(boardx)
+                    rollout_boards.remove(board)
+
         for idx, (index, board, node) in enumerate(tuples):
             virtual_loss, virtual_visit = self.get_virtual_value_function(index)
-            if board.winner == DRAW:
-                value = 0.0
+            if winners[idx] is None:
+                if board.winner == DRAW:
+                    value = 0.0
+                else:
+                    player = players[idx]
+                    value = -1.0 if board.winner == player else 1.0
             else:
                 player = players[idx]
-                value = -1.0 if board.winner == player else 1.0
+                value = -1.0 if winners[idx] == player else 1.0
             node.update(value, index, virtual_loss, virtual_visit)
             if progbar is not None:
-                probar.update()
+                progbar.update()
 
     def mcts(self, board, verbose=1):
         board = MCTSBoard(board, True)
@@ -193,6 +206,7 @@ class RolloutMCTSBase(object):
             while not updateQueue.empty():
                 tuples.append(updateQueue.get_nowait())
             if len(tuples) == 0:
+                condition.notifyAll()
                 condition.release()
                 continue
             left_tuples = self.update_nowait(tuples, progbar)
@@ -230,12 +244,15 @@ class RolloutMCTSBase(object):
         tuples = self.tuple_table[zobristKey]
         max_action = None
         max_visit = 0.0
+        max_node = None
         for key, action, _ in tuples:
             node = self.node_pool[key]
             if node.N_r > max_visit:
                 max_visit = node.N_r
                 max_action = action
-        print('visit time: {}'.format(int(max_visit)))
+                max_node = node
+        print('visit time: {} value: {:.4f}'.format(int(max_visit),
+              max_node.W_r/max_visit))
         return max_action
 
     def get_virtual_value_function(self, index):
