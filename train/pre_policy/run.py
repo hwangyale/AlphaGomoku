@@ -1,6 +1,6 @@
 from keras.callbacks import LearningRateScheduler
 from AlphaGomoku.neural_networks.keras.train import PrePolicyTrainer
-from AlphaGomoku.neural_networks.keras.policy import ResNetPolicy
+from AlphaGomoku.neural_networks.keras.policy import ResNetPolicy, UnitizedResNetPolicy
 from AlphaGomoku.neural_networks.keras.weights import get_config_file
 from AlphaGomoku.neural_networks.keras.weights import get_weight_file
 from AlphaGomoku.train.common import get_trainer
@@ -8,7 +8,8 @@ from AlphaGomoku.data import get_data_file
 from AlphaGomoku.utils.json_utils import json_dump_tuple
 
 def main():
-    resnet_policy = ResNetPolicy(stack_nb=1)
+    # resnet_policy = ResNetPolicy(stack_nb=1)
+    resnet_policy = UnitizedResNetPolicy(stack_nb=1)
     resnet = resnet_policy.network
     trainer = get_trainer(PrePolicyTrainer, resnet, 0, get_data_file('pre', 0),
                           batch_size=128, epochs=200, verbose=1)
