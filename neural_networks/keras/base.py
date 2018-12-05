@@ -1,4 +1,5 @@
 __all__ = ['PolicyBase', 'ValueBase', 'MixtureBase']
+import os
 import numpy as np
 import keras.backend as K
 import keras.engine as KE
@@ -55,8 +56,7 @@ class Base(object):
 
     def load_weights(self, filepath):
         if not os.path.exists(filepath):
-            print('not found weight file, the weights saved')
-            self.save_weights(filepath)
+            raise Exception('not found weight file, the weights saved')
         self.network.load_weights(filepath, by_name=True)
 
     def get_config(self):

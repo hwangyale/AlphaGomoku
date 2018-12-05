@@ -70,8 +70,7 @@ class EvaluationMCTSBase(object):
         self.condition = CONDITION if condition is None else condition
         self.threads = []
 
-    def traverse(self, board, start=True):
-        board = MCTSBoard(board, True)
+    def traverse(self, board, root, start=True):
         condition = self.condition
 
         traversalQueue = queue.Queue()
@@ -79,18 +78,12 @@ class EvaluationMCTSBase(object):
         for index in range(self.traverse_time):
             traversalQueue.put_nowait((index, board.copy()))
 
-        Node(board.zobristKey, self.node_pool, self.left_pool,
-             self.delete_threshold, self.tuple_table, self.action_table,
-             self.value_table)
-        root = self.node_pool[board.zobristKey]
-        root.estimate(board)
-
         for _ in range(self.thread_number):
             thread = EvaluationTraversal(traversalQueue, updateQueue, root,
                                          self.get_virtual_value_function, self.c_puct,
                                          self.condition, start)
             self.threads.append(thread)
-        return root, updateQueue
+        return updateQueue
 
     def update_nowait(self, tuples, progbar=None):
         left_tuples = []
@@ -127,10 +120,21 @@ class EvaluationMCTSBase(object):
                 progbar.update()
 
     def mcts(self, board, verbose=1):
+        board = MCTSBoard(board, True)
         traverse_time = self.traverse_time
         node_pool = self.node_pool
         left_pool = self.left_pool
         condition = self.condition
+
+        Node(board.zobristKey, node_pool, left_pool,
+             self.delete_threshold, self.tuple_table, self.action_table,
+             self.value_table)
+        root = self.node_pool[board.zobristKey]
+        root.estimate(board)
+
+        if self.value_table[board.zobristKey] is not None:
+            actions = self.action_table[board.zobristKey]
+            return actions[np.random.randint(len(actions))]
 
         if verbose:
             progbar = ProgBar(traverse_time)
@@ -138,7 +142,7 @@ class EvaluationMCTSBase(object):
         else:
             progbar = None
         total_count = 0
-        root, updateQueue = self.traverse(board, True)
+        updateQueue = self.traverse(board, root, True)
         while True:
             tuples = []
             condition.acquire()

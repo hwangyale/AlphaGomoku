@@ -38,7 +38,8 @@ class CacheCallback(KC.Callback):
         self.begin_save()
 
     def on_epoch_end(self, epoch, logs=None):
-        self.epoch_save()
+        # self.epoch_save()
+        pass
 
     def on_train_end(self, logs=None):
         remove_folder(self.folder)
