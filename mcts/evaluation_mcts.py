@@ -192,3 +192,56 @@ class EvaluationMCTSBase(object):
 
     def get_virtual_value_function(self, index):
         return MCTS_VIRTUAL_LOSS, MCTS_VIRTUAL_VISIT
+
+    def get_config(self):
+        config = {
+            'traverse_time': self.traverse_time,
+            'c_puct': self.c_puct,
+            'thread_time': self.thread_number,
+            'delete_threshold': self.delete_threshold,
+            'condition': None
+        }
+
+        keys2nodeConfigs = {key: node.get_config()
+                            for key, node in self.node_pool.items()}
+        config['keys2nodeConfigs'] = keys2nodeConfigs
+
+        config['keys2tuples'] = {key: tpl for key, tpl in self.tuple_table.items()}
+        config['keys2actions'] = {key: action for key, action in self.action_table.items()}
+        config['keys2values'] = {key: value for key, value in self.value_table.items()}
+
+        return config
+
+    @classmethod
+    def from_config(cls, config, mixture_network):
+        tree = cls(
+            mixture_network,
+            traverse_time=config['traverse_time'],
+            c_puct=config['c_puct'],
+            thread_number=config['thread_number'],
+            delete_threshold=config['delete_threshold'],
+            condition=config['condition']
+        )
+
+        node_pool = tree.node_pool
+        left_pool = tree.left_pool
+        delete_threshold = tree.delete_threshold
+        tuple_table = tree.tuple_table
+        action_table = tree.action_table
+        value_table = tree.value_table
+
+        for key, nodeConfig in config['keys2nodeConfigs'].items():
+            Node.from_config(nodeConfig, key, node_pool,
+                             left_pool, delete_threshold,
+                             tuple_table, action_table, value_table)
+
+        for key, tpl in config['keys2tuples'].items():
+            tuple_table[key] = tpl
+
+        for key, actions in config['keys2actions']:
+            action_table[key] = actions
+
+        for key, value in config['keys2values']:
+            value_table[key] = value
+
+        return tree

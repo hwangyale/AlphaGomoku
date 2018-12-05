@@ -259,3 +259,24 @@ class Node(object):
         print('warning: zero sum of actions in developing the node')
         prob = 1 / float(len(actions))
         return [prob for _ in actions]
+
+    def get_config(self):
+        config = {
+            'indice2parents': self.indice2parents,
+            'expanded': self.expanded,
+            'value': self.value,
+            'estimated': self.estimated,
+            'W_r': self.W_r,
+            'W_v': self.W_v,
+            'N_r': self.N_r,
+            'N_v': self.N_v
+        }
+        return config
+
+    @classmethod
+    def from_config(cls, config, zobristKey, node_pool,
+                    left_pool, delete_threshold,
+                    tuple_table, action_table, value_table):
+        cls(zobristKey, node_pool, left_pool, delete_threshold,
+            tuple_table, action_table, value_table)
+        cls.__dict__.update(config)
