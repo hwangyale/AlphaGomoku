@@ -242,10 +242,10 @@ class EvaluationMCTSBase(object):
         for key, tpl in config['keys2tuples'].items():
             tuple_table[key] = tpl
 
-        for key, actions in config['keys2actions']:
+        for key, actions in config['keys2actions'].items():
             action_table[key] = actions
 
-        for key, value in config['keys2values']:
+        for key, value in config['keys2values'].items():
             value_table[key] = value
 
         return tree
