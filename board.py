@@ -169,7 +169,7 @@ class Board(CPPBoard):
         new_board._zobristKey = self._zobristKey
         return new_board
 
-    def visualize(self, time=None):
+    def visualize(self, time=None, cla=True):
         if self.axes is None:
             self.axes = plt.gca()
         axes = self.axes
@@ -191,7 +191,8 @@ class Board(CPPBoard):
         if time is None:
             time = self.visualization_time
         plt.pause(time)
-        plt.cla()
+        if cla:
+            plt.cla()
 
     @property
     def zobristKey(self):
