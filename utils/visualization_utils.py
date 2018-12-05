@@ -1,7 +1,8 @@
+import numpy as np
 import matplotlib.pyplot as plt
 from ..global_constants import *
 
-def visualize(pairs, time, dx=-.5, dy=-.2):
+def visualize(pairs, time=10, cla=True, dx=-.5, dy=-.2):
     axes = plt.gca()
     axis = np.linspace(0, BOARD_SIZE+1, BOARD_SIZE+2)
     axes.patch.set_facecolor((255 / 256., 206 / 256., 118 / 256.))
@@ -16,3 +17,5 @@ def visualize(pairs, time, dx=-.5, dy=-.2):
     if time is None:
         time = self.visualization_time
     plt.pause(time)
+    if cla:
+        plt.cla()

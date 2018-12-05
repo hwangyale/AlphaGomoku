@@ -147,24 +147,26 @@ class Board(CPPBoard):
         return self.tensors[self.player]
 
     def copy(self):
-        new_board = super(Board, self).copy()
+        new_board = Board(
+            history=[],
+            toTensor=self.toTensor,
+            visualization=False,
+            visualization_time=self.visualization_time,
+            defend=self.defend,
+            attack_vct_depth=self.attack_vct_depth,
+            attack_vct_time=self.attack_vct_time,
+            defend_vct_depth=self.defend_vct_depth,
+            defend_vct_time=self.defend_vct_time
+        )
+        new_board.cpp_board = super(Board, self).copy().cpp_board
         new_board.legal_actions = self.legal_actions
 
-        new_board.toTensor = self.toTensor
         if self.toTensor:
             new_board.tensors = {c: t.copy() for c, t in self.tensors.items()}
         else:
             new_board.tensors = None
 
-        new_board.visualization = False
-        new_board.visualization_time = self.visualization_time
         new_board.axes = None
-
-        new_board.defend = self.defend
-        new_board.attack_vct_depth = self.attack_vct_depth
-        new_board.attack_vct_time = self.attack_vct_time
-        new_board.defend_vct_depth = self.defend_vct_depth
-        new_board.defend_vct_time = self.defend_vct_time
 
         new_board._zobristKey = self._zobristKey
         return new_board

@@ -110,7 +110,7 @@ class PolicyBase(Base):
 
 class ValueBase(Base):
     def value_tolist(self, boards, values):
-        return tosingleton([values[i] for i in range(len(tolist(boards)))])
+        return tosingleton([float(values[i]) for i in range(len(tolist(boards)))])
 
     def predict_values(self, boards):
         return self.value_tolist(boards, self.predict(boards))
