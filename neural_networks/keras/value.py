@@ -1,4 +1,4 @@
-__all__ = ['ResNetValue']
+__all__ = ['ResNetValue', 'UnitizedResNetValue']
 import keras.backend as K
 import keras.layers as KL
 import keras.engine as KE

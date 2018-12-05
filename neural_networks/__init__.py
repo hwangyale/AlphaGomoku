@@ -5,7 +5,7 @@ def get_network(function, network_type, backend, *args, **kwargs):
     if function not in ['policy', 'value', 'mixture']:
         raise Exception('Unknown `function`: {}'.format(function))
 
-    if network_type not in ['resnet']:
+    if network_type not in ['resnet', 'unitized_resnet']:
         raise Exception('Unknown `network_type`: {}'.format(network_type))
 
     if backend not in ['keras']:
@@ -13,7 +13,7 @@ def get_network(function, network_type, backend, *args, **kwargs):
 
     function = function[0].capitalize() + function[1:]
     network_type = {
-        'resnet': 'ResNet'
+        'resnet': 'ResNet', 'unitized_resnet': 'UnitizedResNet'
     }[network_type]
     cls_name = '{}{}'.format(network_type, function)
     if backend == 'keras':

@@ -6,7 +6,7 @@ from AlphaGomoku.neural_networks.keras.weights import get_weight_file
 from AlphaGomoku.board import Board
 from AlphaGomoku.utils.visualization_utils import visualize
 
-mixture = get_network('mixture', 'resnet', 'keras', stack_nb=2)
+mixture = get_network('mixture', 'unitized_resnet', 'keras', stack_nb=1)
 mixture.load_weights(get_weight_file('pre', mixture.network.name, 0))
 board = Board(toTensor=True, visualization=False)
 

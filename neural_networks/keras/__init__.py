@@ -1,6 +1,10 @@
-__all__ = ['KerasResNetPolicy', 'KerasResNetValue', 'KerasResNetMixture']
+__all__ = ['KerasResNetPolicy', 'KerasResNetValue', 'KerasResNetMixture',
+           'KerasUnitizedResNetPolicy', 'KerasUnitizedResNetValue',
+           'KerasUnitizedResNetMixture']
 import tensorflow as tf
 import keras.backend.tensorflow_backend as KTF
+from .layers import *
+from .models import *
 from .policy import *
 from .value import *
 from .mixture import *
@@ -14,3 +18,7 @@ KTF.set_session(session)
 KerasResNetPolicy = ResNetPolicy
 KerasResNetValue = ResNetValue
 KerasResNetMixture = ResNetMixture
+
+KerasUnitizedResNetPolicy = UnitizedResNetPolicy
+KerasUnitizedResNetValue = UnitizedResNetValue
+KerasUnitizedResNetMixture = UnitizedResNetMixture

@@ -18,11 +18,11 @@ def optimizer_wrapper(optimizer):
 
     def load_weights(self, file_path):
         npz_file = np.load(file_path)
-        self.set_weights([npz_file[w] for w in npz_file.files])
+        self.set_weights([npz_file[str(i)] for i in range(len(npz_file.files))])
 
     def save_weights(self, file_path):
         weights = self.get_weights()
-        np.savez(file_path, *weights)
+        np.savez(file_path, **{str(i): weight for i, weight in enumerate(weights)})
 
     optimizer.load_weights = lambda file_path : load_weights(optimizer, file_path)
     optimizer.save_weights = lambda file_path : save_weights(optimizer, file_path)
@@ -38,8 +38,7 @@ class CacheCallback(KC.Callback):
         self.begin_save()
 
     def on_epoch_end(self, epoch, logs=None):
-        # self.epoch_save()
-        pass
+        self.epoch_save()
 
     def on_train_end(self, logs=None):
         remove_folder(self.folder)

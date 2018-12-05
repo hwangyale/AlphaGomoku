@@ -1,4 +1,4 @@
-__all__ = ['ResNetMixture']
+__all__ = ['ResNetMixture', 'UnitizedResNetMixture']
 import keras.backend as K
 import keras.layers as KL
 import keras.engine as KE
@@ -7,7 +7,7 @@ from ...global_constants import *
 from ...board import Board
 from .base import MixtureBase
 from .layers import Unitization
-from .models import get_resnet
+from .models import get_resnet, get_unitized_resnet
 
 AXIS = 1 if K.image_data_format() == 'channels_first' else -1
 

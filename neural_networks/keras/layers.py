@@ -5,6 +5,7 @@ import keras.layers as KL
 import keras.initializers as KI
 import keras.regularizers as KR
 import keras.constraints as KC
+from .common import register_layers
 
 
 class Unitization(KL.BatchNormalization):
@@ -126,3 +127,6 @@ class Unitization(KL.BatchNormalization):
         }
         base_config = super(Unitization, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
+
+objects = [Unitization]
+register_layers(objects)

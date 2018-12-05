@@ -1,4 +1,4 @@
-__all__ = ['ResNetPolicy']
+__all__ = ['ResNetPolicy', 'UnitizedResNetPolicy']
 import keras.backend as K
 import keras.layers as KL
 import keras.engine as KE
