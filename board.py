@@ -199,3 +199,21 @@ class Board(CPPBoard):
     @property
     def zobristKey(self):
         return self._zobristKey
+
+    def get_config(self):
+        config = {
+            'history': self.history,
+            'toTensor': self.toTensor,
+            'visualization': self.visualization,
+            'visualization_time': self.visualization_time,
+            'defend': self.defend,
+            'attack_vct_depth': self.attack_vct_depth,
+            'attack_vct_time': self.attack_vct_time,
+            'defend_vct_depth': self.defend_vct_depth,
+            'defend_vct_time': self.defend_vct_time
+        }
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        return cls(**config)

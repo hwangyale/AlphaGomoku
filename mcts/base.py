@@ -128,6 +128,14 @@ class MCTSBoard(Board):
         new_board._zobristKey = self._zobristKey
         return new_board
 
+    def get_config(self):
+        config = {'history': self.history}
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        return cls(Board(config['history']))
+
 
 class Node(object):
     def __init__(self, zobristKey, node_pool,
