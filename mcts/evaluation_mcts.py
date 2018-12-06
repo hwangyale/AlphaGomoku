@@ -362,9 +362,15 @@ class EvaluationMCTS(EvaluationMCTSBase):
             'condition': None
         }
 
-        keys2nodeConfigs = {key: node.get_config()
-                            for key, node in self.node_pool.items()}
-        config['keys2nodeConfigs'] = keys2nodeConfigs
+        nodes = []
+        for board, npl in self.node_pool.items():
+            pairs = (
+                board.get_config(),
+                {key: node.get_config() for key, node in npl.items()}
+            )
+            nodes.append(pairs)
+
+        config['nodes'] = nodes
 
         config['keys2tuples'] = {key: tpl for key, tpl in self.tuple_table.items()}
         config['keys2actions'] = {key: action for key, action in self.action_table.items()}
@@ -373,7 +379,7 @@ class EvaluationMCTS(EvaluationMCTSBase):
         return config
 
     @classmethod
-    def from_config(cls, config, mixture_network):
+    def from_config(cls, config, mixture_network, board_cls=Board):
         tree = cls(
             mixture_network,
             traverse_time=config['traverse_time'],
@@ -390,10 +396,15 @@ class EvaluationMCTS(EvaluationMCTSBase):
         action_table = tree.action_table
         value_table = tree.value_table
 
-        for key, nodeConfig in config['keys2nodeConfigs'].items():
-            Node.from_config(nodeConfig, key, node_pool,
-                             left_pool, delete_threshold,
-                             tuple_table, action_table, value_table)
+        boards = []
+        for board_config, nodeConfigs in config['nodes']:
+            board = board_cls.from_config(board_config)
+            npl = node_pool.setdefault(board, {})
+            lpl = left_pool.setdefault(board, set())
+            for key, nodeConfig in nodeConfigs.items():
+                Node.from_config(nodeConfig, key, npl, lpl, delete_threshold,
+                                 tuple_table, action_table, value_table)
+            boards.append(board)
 
         for key, tpl in config['keys2tuples'].items():
             tuple_table[key] = tpl
@@ -404,4 +415,4 @@ class EvaluationMCTS(EvaluationMCTSBase):
         for key, value in config['keys2values'].items():
             value_table[key] = value
 
-        return tree
+        return tree, boards
