@@ -23,6 +23,11 @@ class CPPBoard(object):
             return None
         return unflatten(action)
 
+    def defend_vct(self, action, max_depth, max_time):
+        copy_cpp = cppBoard.Board(self.cpp_board)
+        copy_cpp.move(flatten(action))
+        return copy_cpp.Vct(max_depth, max_time) < 0
+
     @property
     def is_over(self):
         return self.cpp_board.is_over

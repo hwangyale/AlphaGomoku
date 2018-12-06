@@ -93,13 +93,21 @@ class MCTSBoard(Board):
             return actions, None
 
         legal_actions = self.get_legal_actions()
-        actions = [action for action in legal_actions if self.check_bound(action)]
-        return actions, None
+        bounded_actions = [action for action in legal_actions
+                           if self.check_bound(action)]
+        actions = [action for action in bounded_actions
+                   if self.defend_vct(action, MCTS_DEFEND_VCT_DEPTH,
+                                      MCTS_DEFEND_VCT_TIME)]
+        if len(actions) > 0:
+            return actions, None
+        else:
+            return bounded_actions, None
 
     def check_bound(self, action):
-        if len(self.bounds) == 0:
-            return True
         row, col = action
+        if len(self.bounds) == 0:
+            half = BOARD_SIZE // 2
+            return half - 2 <= row <= half + 2 and half - 2 <= col <= half + 2
         bounds = self.bounds
         return bounds[0] <= row <= bounds[1] and bounds[2] <= col <= bounds[3]
 

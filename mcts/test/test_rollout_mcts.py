@@ -4,8 +4,8 @@ from AlphaGomoku.neural_networks.keras.weights import get_weight_file
 from AlphaGomoku.board import Board
 from AlphaGomoku.play import Human, Game
 
-policy = get_network('policy', 'unitized_resnet', 'keras', stack_nb=1)
-# policy.load_weights(get_weight_file('pre', policy.network.name, 0))
+policy = get_network('policy', 'resnet', 'keras', stack_nb=2)
+policy.load_weights(get_weight_file('pre', policy.network.name, 0))
 mcts = RolloutMCTSBase(policy, policy, 100, thread_number=4,
                        depth=6, delete_threshold=10)
 
