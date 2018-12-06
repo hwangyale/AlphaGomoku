@@ -83,7 +83,6 @@ class RolloutMCTSBase(object):
         self.action_table = {}
         self.value_table = {}
         self.condition = CONDITION if condition is None else condition
-        self.threads = []
 
     def traverse(self, board, root, traversalQueue,
                  expandQueue, updateQueue, start=True):
@@ -92,13 +91,15 @@ class RolloutMCTSBase(object):
         for index in range(self.traverse_time):
             traversalQueue.put_nowait((index, board.copy()))
 
+        threads = []
         for _ in range(self.thread_number):
             thread = RolloutTraversal(traversalQueue, expandQueue,
                                       updateQueue, root,
                                       self.get_virtual_value_function,
                                       self.depth, self.c_puct,
                                       self.condition, start)
-            self.threads.append(thread)
+            threads.append(thread)
+        return threads
 
     def update_nowait(self, tuples, progbar=None):
         left_tuples = []
@@ -226,7 +227,6 @@ class RolloutMCTSBase(object):
             condition.notifyAll()
             condition.release()
             if total_count == traverse_time:
-                self.threads.clear()
                 break
 
         action = self.process_root(root)
@@ -334,7 +334,7 @@ class RolloutMCTS(RolloutMCTSBase):
         for board in boards:
             Node(board.zobristKey,
                  node_pool.setdefault(board, {}),
-                 left_pool.setdefault(board, {}),
+                 left_pool.setdefault(board, set()),
                  self.delete_threshold, self.tuple_table,
                  self.action_table, self.value_table)
             root = node_pool[board][board.zobristKey]
@@ -360,10 +360,11 @@ class RolloutMCTS(RolloutMCTSBase):
         traversalQueue = queue.Queue()
         expandQueue = queue.Queue()
         updateQueue = queue.Queue()
+        threads = []
         for board in traverse_boards:
-            self.traverse(MCTSBoard(board, True), roots[board], traversalQueue,
-                          expandQueue, updateQueue, False)
-        for thread in self.threads:
+            threads += self.traverse(MCTSBoard(board, True), roots[board], traversalQueue,
+                                     expandQueue, updateQueue, False)
+        for thread in threads:
             thread.start()
         while True:
             pairs = []
@@ -395,18 +396,18 @@ class RolloutMCTS(RolloutMCTSBase):
             condition.notifyAll()
             condition.release()
             if total_count == max_count:
-                self.threads.clear()
                 break
 
         for board in traverse_boards:
-            actions[board] = self.process_root(roots[board], node_pool[board])
-
-            pairs = [(key, node_pool[key]) for key in left_pool[board]]
-            left_pool[board].clear()
-            node_pool[board].clear()
+            npl = node_pool[board]
+            lpl = left_pool[board]
+            actions[board] = self.process_root(roots[board], npl)
+            pairs = [(key, npl[key]) for key in lpl]
+            lpl.clear()
+            npl.clear()
             for key, node in pairs:
                 node.reset()
-                node_pool[board][key] = node
+                npl[key] = node
 
         return tosingleton([actions[board] for board in boards])
 
@@ -415,13 +416,9 @@ class RolloutMCTS(RolloutMCTSBase):
         tuples = self.tuple_table[zobristKey]
         max_action = None
         max_visit = 0.0
-        max_node = None
         for key, action, _ in tuples:
             node = node_pool[key]
             if node.N_r > max_visit:
                 max_visit = node.N_r
                 max_action = action
-                max_node = node
-        # print('visit time: {} value: {:.4f}'.format(int(max_visit),
-        #       max_node.W_r/max_visit))
         return max_action

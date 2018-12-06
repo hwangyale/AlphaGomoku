@@ -1,4 +1,4 @@
-from AlphaGomoku.mcts.evaluation_mcts import EvaluationMCTSBase
+from AlphaGomoku.mcts.evaluation_mcts import EvaluationMCTS
 from AlphaGomoku.neural_networks import get_network
 from AlphaGomoku.neural_networks.keras.weights import get_weight_file
 from AlphaGomoku.board import Board
@@ -6,7 +6,7 @@ from AlphaGomoku.play import Human, Game
 
 mixture = get_network('mixture', 'resnet', 'keras', stack_nb=2)
 mixture.load_weights(get_weight_file('pre', mixture.network.name, 0))
-mcts = EvaluationMCTSBase(mixture, 500, thread_number=4, delete_threshold=10)
+mcts = EvaluationMCTS(mixture, 500, thread_number=4, delete_threshold=10)
 
 mcts.get_action = lambda board: mcts.mcts(board, 1)
 

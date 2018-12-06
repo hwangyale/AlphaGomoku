@@ -33,7 +33,9 @@ class ProgBar(object):
             print(' ETA: {:.0f}s'.format(left_time), end='')
             sys.stdout.flush()
         else:
-            print(' ETA: {:.0f}s'.format(time.time() - self.start))
+            total_time = time.time() - self.start
+            time_per_step = (total_time / self.steps) * 1000
+            print(' {:.0f}s {:.0f}ms/step'.format(total_time, time_per_step))
 
 
 if __name__ == '__main__':
