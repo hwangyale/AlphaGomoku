@@ -15,11 +15,25 @@ class SelfPlay(object):
 
     def run(self, cache_step=None, board_cls=Board):
         number = self.number
+        batch_size = self.batch_size
         boards = [board_cls() for _ in range(number)]
-        indice = list(range(number))
-        play_indice = [:self.batch_size]
+        index = min(batch_size, number)
+        play_indice = set(range(index))
         step = 0
-        finished = 0
+        while len(play_indice) > 0:
+            temp_indice = list(play_indice)
+            temp_boards = [boards[idx] for idx in temp_indice]
+            actions = tolist(mcts.mcts(temp_boards, verbose=0))
+            for idx, board, action in zip(temp_indice, temp_boards, actions):
+                board.move(action)
+                if board.is_over:
+                    play_indice.remove(idx)
+                    if index < number:
+                        play_indice.add(index)
+                        index += 1
+            step += 1
+        
+
 
     def run_from_config(self, config):
 
