@@ -3,6 +3,7 @@ import queue
 import numpy as np
 from ..global_constants import *
 from ..common import *
+from ..board import Board
 from ..utils.thread_utils import CONDITION
 from ..utils.zobrist_utils import get_zobrist_key
 from ..utils.generic_utils import ProgBar
