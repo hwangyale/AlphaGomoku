@@ -1,1 +1,1 @@
-"{\"metrics\": [\"acc\"], \"loss\": \"categorical_crossentropy\", \"loss_weights\": null}"
+"{\"loss\": \"categorical_crossentropy\", \"loss_weights\": null, \"metrics\": [\"acc\"]}"

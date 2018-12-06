@@ -97,24 +97,23 @@ class TrainerBase(object):
     def get_begin_save(self):
         def save():
             self.train_config_file = self.get_train_path()
-            self.optimizer_weight_file = self.get_optimizer_path()[1]
-            self.network_weight_file = self.get_network_path()[1]
             json_dump_tuple(self.train_params, self.train_config_file)
-            self.optimizer.save_weights(self.optimizer_weight_file)
-            self.network.save_weights(self.network_weight_file)
+            self.optimizer.save_weights(self.get_optimizer_path()[1])
+            self.network.save_weights(self.get_network_path()[1])
         return save
 
     def get_epoch_save(self):
         def save():
             self.train_params['initial_epoch'] += 1
+            self.optimizer.save_weights(self.get_optimizer_path()[1])
+            self.network.save_weights(self.get_network_path()[1])
             json_dump_tuple(self.train_params, self.train_config_file)
-            self.optimizer.save_weights(self.optimizer_weight_file)
-            self.network.save_weights(self.network_weight_file)
         return save
 
     @classmethod
     def from_cache(cls, network_name):
         trainer = cls(None, network_name, '')
+        trainer.train_params.update(json_load_tuple(trainer.get_train_path()))
         network_config_file, network_weight_file = trainer.get_network_path()
         network = KE.Model.from_config(json_load_tuple(network_config_file))
         network.load_weights(network_weight_file)
@@ -125,7 +124,6 @@ class TrainerBase(object):
         trainer.optimizer_params.update(json_load_tuple(optimizer_config_file))
         trainer.compile()
         trainer.optimizer.load_weights(optimizer_weight_file)
-        trainer.train_params.update(json_load_tuple(trainer.get_train_path()))
         return trainer
 
     def get_loss(self):
@@ -176,14 +174,16 @@ class TrainerBase(object):
 
     def get_optimizer_path(self):
         config_file_name = 'optimizer_config.json'
-        weight_file_name = 'optimizer_weights.npz'
+        epoch = self.train_params['initial_epoch']
+        weight_file_name = 'optimizer_weights_{}.npz'.format(epoch)
         folder = self.get_cache_folder()
         return os.path.join(folder, config_file_name), \
                os.path.join(folder, weight_file_name)
 
     def get_network_path(self):
         config_file_name = 'network_config.json'
-        weight_file_name = 'network_weights.npz'
+        epoch = self.train_params['initial_epoch']
+        weight_file_name = 'network_weights_{}.npz'.format(epoch)
         folder = self.get_cache_folder()
         return os.path.join(folder, config_file_name), \
                os.path.join(folder, weight_file_name)
