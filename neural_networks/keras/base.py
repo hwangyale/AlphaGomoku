@@ -5,6 +5,10 @@ import keras.backend as K
 import keras.engine as KE
 from ...common import *
 from ...board import Board
+from ...utils.board_utils import action_functions
+from ...utils.board_utils import tensor_functions
+from ...utils.board_utils import recover_action_functions
+from ...utils.board_utils import recover_tensor_functions
 from ...utils.json_utils import json_load_tuple, json_dump_tuple
 
 
@@ -22,6 +26,7 @@ class Base(object):
         else:
             self.network = self.initialize_network(**kwargs)
         self.batch_size = batch_size
+        self.temp_functions = {}
 
     def initialize_network(self, **kwargs):
         raise NotImplementedError('`initialize_network` has not been implemented')
@@ -32,9 +37,16 @@ class Base(object):
     def fit(self, *args, **kwargs):
         self.network.fit(*args, **kwargs)
 
-    def get_tensors(self, boards):
+    def get_tensors(self, boards, transform=False):
         boards = tolist(boards)
-        tensors = [board.tensor for board in boards]
+        if not transform:
+            tensors = [board.tensor for board in boards]
+        else:
+            tensors = []
+            for board in boards:
+                func = tensor_actions[np.random.randint(8)]
+                tensors.append(func(board.tensor))
+                self.temp_functions[board] = func
         shape = tensors[0].shape
         tensors = np.reshape(np.concatenate(tensors), (len(boards), )+shape)
         if data_format == 'channels_first':
@@ -47,9 +59,32 @@ class Base(object):
         else:
             raise Exception('Unknown data format: {}'.format(data_format))
 
-    def predict(self, boards):
-        tensors = self.get_tensors(boards)
-        return self.network.predict(tensors, batch_size=self.batch_size)
+    def predict(self, boards, transform=False):
+        boards = tolist(boards)
+        tensors = self.get_tensors(boards, transform=transform)
+        predicted_tensors = self.network.predict(tensors, batch_size=self.batch_size)
+        if not transform:
+            return predicted_tensors
+        if isinstance(predicted_tensors, list):
+            distributions, values = predicted_tensors
+        elif predicted_tensors.shape[1] == 1:
+            self.temp_functions.clear()
+            return predicted_tensors
+        else:
+            distributions = predicted_tensors
+            values = None
+        unflatten_shape = (BOARD_SIZE, BOARD_SIZE)
+        flatten_shape = (BOARD_SIZE**2, )
+        for index, board in enumerate(boards):
+            distribution = distributions[index, ...]
+            func = self.temp_functions.pop(board)
+            recover_func = recover_tensor_functions[func]
+            distribution = recover_func(np.reshape(distribution, unflatten_shape))
+            distributions[index, ...] = np.reshape(distribution, flatten_shape)
+        if values is None:
+            return distributions
+        else:
+            return distributions, values
 
     def save_weights(self, filepath):
         self.network.save_weights(filepath)
@@ -94,10 +129,10 @@ class PolicyBase(Base):
                 actions.append(legal_actions[multinomial_sampling(probs)])
         return tosingleton(actions)
 
-    def predict_actions(self, boards, sample=True):
+    def predict_actions(self, boards, sample=True, transform=False):
         if sample:
-            return self.sample(boards, self.predict(boards))
-        distributions = self.predict(boards)
+            return self.sample(boards, self.predict(boards, transform=transform))
+        distributions = self.predict(boards, transform=transform)
         distributions = [distributions[index, ...]
                          for index in range(len(tolist(boards)))]
         return tosingleton(distributions)
@@ -112,24 +147,24 @@ class ValueBase(Base):
     def value_tolist(self, boards, values):
         return tosingleton([float(values[i]) for i in range(len(tolist(boards)))])
 
-    def predict_values(self, boards):
-        return self.value_tolist(boards, self.predict(boards))
+    def predict_values(self, boards, transform=False):
+        return self.value_tolist(boards, self.predict(boards, transform=transform))
 
 
 class MixtureBase(PolicyBase, ValueBase):
-    def predict_actions(self, boards, sample=True):
-        distributions, _ = self.predict(boards)
+    def predict_actions(self, boards, sample=True, transform=False):
+        distributions, _ = self.predict(boards, transform=transform)
         if sample:
             return self.sample(boards, distributions)
         distributions = [distributions[index, ...] for index in range(len(tolist(boards)))]
         return tosingleton(distributions)
 
-    def predict_values(self, boards):
-        _, values = self.predict(boards)
+    def predict_values(self, boards, transform=False):
+        _, values = self.predict(boards, transform=transform)
         return self.value_tolist(boards, values)
 
-    def predict_pairs(self, boards, sample=True):
-        distributions, values = self.predict(boards)
+    def predict_pairs(self, boards, sample=True, transform=False):
+        distributions, values = self.predict(boards, transform=transform)
         if sample:
             return self.sample(boards, distributions), \
                    self.value_tolist(boards, values)
