@@ -85,12 +85,10 @@ class RolloutMCTSBase(object):
         self.condition = CONDITION if condition is None else condition
         self.threads = []
 
-    def traverse(self, board, root, start=True):
+    def traverse(self, board, root, traversalQueue,
+                 expandQueue, updateQueue, start=True):
         condition = self.condition
 
-        traversalQueue = queue.Queue()
-        expandQueue = queue.Queue()
-        updateQueue = queue.Queue()
         for index in range(self.traverse_time):
             traversalQueue.put_nowait((index, board.copy()))
 
@@ -101,7 +99,6 @@ class RolloutMCTSBase(object):
                                       self.depth, self.c_puct,
                                       self.condition, start)
             self.threads.append(thread)
-        return expandQueue, updateQueue
 
     def update_nowait(self, tuples, progbar=None):
         left_tuples = []
@@ -194,7 +191,11 @@ class RolloutMCTSBase(object):
         else:
             progbar = None
         total_count = 0
-        expandQueue, updateQueue = self.traverse(board, root, True)
+        traversalQueue = queue.Queue()
+        expandQueue = queue.Queue()
+        updateQueue = queue.Queue()
+        self.traverse(board, root, traversalQueue,
+                      expandQueue, updateQueue, True)
         while True:
             pairs = []
             condition.acquire()
@@ -312,3 +313,115 @@ class RolloutMCTSBase(object):
             value_table[key] = value
 
         return tree
+
+
+class RolloutMCTS(RolloutMCTSBase):
+    def __init__(self, *args, **kwargs):
+        super(RolloutMCTS, self).__init__(*args, **kwargs)
+        self.left_pool = {}
+
+    def mcts(self, boards, verbose=1):
+        boards = tolist(boards)
+        traverse_time = self.traverse_time
+        node_pool = self.node_pool
+        left_pool = self.left_pool
+        condition = self.condition
+        value_table = self.value_table
+        action_table = self.action_table
+
+        roots = {}
+        actions = {}
+        for board in boards:
+            Node(board.zobristKey,
+                 node_pool.setdefault(board, {}),
+                 left_pool.setdefault(board, {}),
+                 self.delete_threshold, self.tuple_table,
+                 self.action_table, self.value_table)
+            root = node_pool[board][board.zobristKey]
+            root.estimate(MCTSBoard(board, True))
+            if value_table[board.zobristKey] is not None:
+                potential_actions = action_table[board.zobristKey]
+                actions[board] = potential_actions[np.random.randint(len(potential_actions))]
+            else:
+                roots[board] = root
+
+        if len(roots) == 0:
+            return tosingleton([actions[board] for board in boards])
+
+        traverse_boards = list(roots.keys())
+        max_count = len(traverse_boards) * traverse_time
+
+        if verbose:
+            progbar = ProgBar(max_count)
+            progbar.initialize()
+        else:
+            progbar = None
+        total_count = 0
+        traversalQueue = queue.Queue()
+        expandQueue = queue.Queue()
+        updateQueue = queue.Queue()
+        for board in traverse_boards:
+            self.traverse(MCTSBoard(board, True), roots[board], traversalQueue,
+                          expandQueue, updateQueue, False)
+        for thread in self.threads:
+            thread.start()
+        while True:
+            pairs = []
+            condition.acquire()
+            while not expandQueue.empty():
+                pairs.append(expandQueue.get_nowait())
+            if len(pairs) > 0:
+                self.expand(pairs)
+            tuples = []
+            while not updateQueue.empty():
+                tuples.append(updateQueue.get_nowait())
+            if len(tuples) == 0:
+                condition.notifyAll()
+                condition.release()
+                continue
+            left_tuples = self.update_nowait(tuples, progbar)
+            total_count += len(tuples) - len(left_tuples)
+            if total_count == max_count:
+                condition.notifyAll()
+                condition.release()
+                break
+            elif len(left_tuples) == 0:
+                condition.notifyAll()
+                condition.release()
+                continue
+
+            self.update_by_rollout(left_tuples, progbar)
+            total_count += len(left_tuples)
+            condition.notifyAll()
+            condition.release()
+            if total_count == max_count:
+                self.threads.clear()
+                break
+
+        for board in traverse_boards:
+            actions[board] = self.process_root(roots[board], node_pool[board])
+
+            pairs = [(key, node_pool[key]) for key in left_pool[board]]
+            left_pool[board].clear()
+            node_pool[board].clear()
+            for key, node in pairs:
+                node.reset()
+                node_pool[board][key] = node
+
+        return tosingleton([actions[board] for board in boards])
+
+    def process_root(self, root, node_pool):
+        zobristKey = root.zobristKey
+        tuples = self.tuple_table[zobristKey]
+        max_action = None
+        max_visit = 0.0
+        max_node = None
+        for key, action, _ in tuples:
+            node = node_pool[key]
+            if node.N_r > max_visit:
+                max_visit = node.N_r
+                max_action = action
+                max_node = node
+        # print('visit time: {} value: {:.4f}'.format(int(max_visit),
+        #       max_node.W_r/max_visit))
+        return max_action
