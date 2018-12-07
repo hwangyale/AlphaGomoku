@@ -278,7 +278,7 @@ class EvaluationMCTS(EvaluationMCTSBase):
             root = node_pool[board][board.zobristKey]
             root.estimate(MCTSBoard(board, True))
             if value_table[board.zobristKey] is not None:
-                actions[board] = self.process_root(root, node_pool[board])
+                actions[board] = self.process_root(board, root)
             else:
                 roots[board] = root
 
@@ -331,7 +331,7 @@ class EvaluationMCTS(EvaluationMCTSBase):
         for board in traverse_boards:
             npl = node_pool[board]
             lpl = left_pool[board]
-            actions[board] = self.process_root(roots[board], npl)
+            actions[board] = self.process_root(board, root)
             pairs = [(key, npl[key]) for key in lpl]
             lpl.clear()
             npl.clear()
@@ -341,7 +341,7 @@ class EvaluationMCTS(EvaluationMCTSBase):
 
         return tosingleton([actions[board] for board in boards])
 
-    def process_root(self, root, node_pool):
+    def process_root(self, board, root):
         if root.value is not None:
             actions = self.action_table[root.zobristKey]
             return actions[np.random.randint(len(actions))]
@@ -349,6 +349,7 @@ class EvaluationMCTS(EvaluationMCTSBase):
         tuples = self.tuple_table[zobristKey]
         max_action = None
         max_visit = 0.0
+        node_pool = self.node_pool[board]
         for key, action, _ in tuples:
             node = node_pool[key]
             if node.N_r > max_visit:

@@ -34,7 +34,7 @@ class RLNode(Node):
             probs.append(prob)
 
         if len(self.indice2parents) == 0 and not hasattr(self, 'dirichlet_noise'):
-            self.dirichlet_noise = np.random.dirichlet_noise(
+            self.dirichlet_noise = np.random.dirichlet(
                 [MCTS_DIRICHLET_NOISE]*len(tuples), 1
             )[0, ...]
 
@@ -54,8 +54,14 @@ class RLNode(Node):
                     max_value = value
                     max_index = idx
         else:
-            max_index = max(list(range(len(tuples))),
-                            key=lambda idx: probs[idx])
+            if len(self.indice2parents) == 0:
+                max_index = max(list(range(len(tuples))),
+                                key=lambda idx:
+                                (1-MCTS_DIRICHLET_WEIGHT)*probs[idx] +
+                                MCTS_DIRICHLET_WEIGHT*self.dirichlet_noise[idx])
+            else:
+                max_index = max(list(range(len(tuples))),
+                                key=lambda idx: probs[idx])
 
         max_action = actions[max_index]
         max_node = nodes[max_index]
@@ -97,14 +103,49 @@ class RLEvaluationMCTS(EvaluationMCTS):
             if progbar is not None:
                 progbar.update()
 
-    def process_root(self, root, node_pool):
-        zobristKey = root.zobristKey
-        tuples = self.tuple_table[zobristKey]
-        max_action = None
-        max_visit = 0.0
-        for key, action, _ in tuples:
+    def mcts(self, board, verbose=1):
+        return super(RLEvaluationMCTS, self).mcts(board, verbose, RLNode)
+
+    def process_root(self, board, root):
+        history = board.history[:]
+        step = len(history)
+        if root.value is not None:
+            actions = self.action_table[root.zobristKey]
+            visits = [(action, 1) for action in actions]
+            self.visit_container.append((history, visits))
+            if step < MCTS_RL_SAMPLE_STEP:
+                return actions[np.random.randint(len(actions))]
+            else:
+                return actions[0]
+
+        if step >= MCTS_RL_SAMPLE_STEP:
+            max_action = None
+            max_visit = 0.0
+        node_pool = self.node_pool[board]
+        visits = []
+        for key, action, _ in self.tuple_table[root.zobristKey]:
             node = node_pool[key]
-            if node.N_r > max_visit:
+            visits.append((action, node.N_r))
+            if step >= MCTS_RL_SAMPLE_STEP and node.N_r > max_visit:
                 max_visit = node.N_r
                 max_action = action
-        return max_action
+        self.visit_container.append((history, visits))
+        if step < MCTS_RL_SAMPLE_STEP:
+            Ns = [N for _, N in visits]
+            s = float(sum(Ns))
+            idx = multinomial_sampling([N/s for N in Ns])
+            return visits[idx][0]
+        else:
+            return max_action
+
+    def get_config(self):
+        config = super(RLEvaluationMCTS, self).get_config()
+        config['visit_container'] = self.visit_container
+        return config
+
+    @classmethod
+    def from_config(cls, config, *args, **kwargs):
+        visit_container = config.pop('visit_container')
+        mcts = super(RLEvaluationMCTS, cls).from_config(config, *args, **kwargs)
+        mcts.visit_container = visit_container
+        return mcts

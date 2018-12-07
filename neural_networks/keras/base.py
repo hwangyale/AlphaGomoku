@@ -44,7 +44,7 @@ class Base(object):
         else:
             tensors = []
             for board in boards:
-                func = tensor_actions[np.random.randint(8)]
+                func = tensor_functions[np.random.randint(8)]
                 tensors.append(func(board.tensor))
                 self.temp_functions[board] = func
         shape = tensors[0].shape
