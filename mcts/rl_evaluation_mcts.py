@@ -79,7 +79,7 @@ class RLNode(Node):
 class RLEvaluationMCTS(EvaluationMCTS):
     def __init__(self, *args, **kwargs):
         super(RLEvaluationMCTS, self).__init__(*args, **kwargs)
-        self.visit_container = []
+        self.visit_container = {}
 
     def expand_and_update(self, tuples, progbar=None):
         indice = []
@@ -109,10 +109,11 @@ class RLEvaluationMCTS(EvaluationMCTS):
     def process_root(self, board, root):
         history = board.history[:]
         step = len(history)
+        visit_container = self.visit_container.setdefault(board, [])
         if root.value is not None:
             actions = self.action_table[root.zobristKey]
             visits = [(action, 1) for action in actions]
-            self.visit_container.append((history, visits))
+            visit_container.append((history, visits))
             if step < MCTS_RL_SAMPLE_STEP:
                 return actions[np.random.randint(len(actions))]
             else:
@@ -129,7 +130,7 @@ class RLEvaluationMCTS(EvaluationMCTS):
             if step >= MCTS_RL_SAMPLE_STEP and node.N_r > max_visit:
                 max_visit = node.N_r
                 max_action = action
-        self.visit_container.append((history, visits))
+        visit_container.append((history, visits))
         if step < MCTS_RL_SAMPLE_STEP:
             Ns = [N for _, N in visits]
             s = float(sum(Ns))
@@ -138,6 +139,7 @@ class RLEvaluationMCTS(EvaluationMCTS):
         else:
             return max_action
 
+## TODO:
     def get_config(self):
         config = super(RLEvaluationMCTS, self).get_config()
         config['visit_container'] = self.visit_container
