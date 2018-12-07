@@ -189,9 +189,9 @@ class Node(object):
             tuples = self.tuple_table[zobristKey]
 
         for key, action, prob in tuples:
-            Node(key, self.node_pool, self.left_pool,
-                 self.delete_threshold, self.tuple_table,
-                 self.action_table, self.value_table)
+            self.__class__(key, self.node_pool, self.left_pool,
+                           self.delete_threshold, self.tuple_table,
+                           self.action_table, self.value_table)
         self.expanded = True
 
     def select(self, board, thread_index, virtual_loss=None,

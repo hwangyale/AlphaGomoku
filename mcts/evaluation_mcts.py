@@ -258,7 +258,7 @@ class EvaluationMCTS(EvaluationMCTSBase):
         super(EvaluationMCTS, self).__init__(*args, **kwargs)
         self.left_pool = {}
 
-    def mcts(self, boards, verbose=1):
+    def mcts(self, boards, verbose=1, node_cls=Node):
         boards = tolist(boards)
         traverse_time = self.traverse_time
         node_pool = self.node_pool
@@ -270,16 +270,15 @@ class EvaluationMCTS(EvaluationMCTSBase):
         roots = {}
         actions = {}
         for board in boards:
-            Node(board.zobristKey,
-                 node_pool.setdefault(board, {}),
-                 left_pool.setdefault(board, set()),
-                 self.delete_threshold, self.tuple_table,
-                 self.action_table, self.value_table)
+            node_cls(board.zobristKey,
+                     node_pool.setdefault(board, {}),
+                     left_pool.setdefault(board, set()),
+                     self.delete_threshold, self.tuple_table,
+                     self.action_table, self.value_table)
             root = node_pool[board][board.zobristKey]
             root.estimate(MCTSBoard(board, True))
             if value_table[board.zobristKey] is not None:
-                potential_actions = action_table[board.zobristKey]
-                actions[board] = potential_actions[np.random.randint(len(potential_actions))]
+                actions[board] = self.process_root(root, node_pool[board])
             else:
                 roots[board] = root
 
@@ -343,6 +342,9 @@ class EvaluationMCTS(EvaluationMCTSBase):
         return tosingleton([actions[board] for board in boards])
 
     def process_root(self, root, node_pool):
+        if root.value is not None:
+            actions = self.action_table[root.zobristKey]
+            return actions[np.random.randint(len(actions))]
         zobristKey = root.zobristKey
         tuples = self.tuple_table[zobristKey]
         max_action = None
@@ -380,7 +382,8 @@ class EvaluationMCTS(EvaluationMCTSBase):
         return config
 
     @classmethod
-    def from_config(cls, config, mixture_network, board_cls=Board):
+    def from_config(cls, config, mixture_network, board_cls=Board,
+                    node_cls=Node):
         tree = cls(
             mixture_network,
             traverse_time=config['traverse_time'],
@@ -403,8 +406,8 @@ class EvaluationMCTS(EvaluationMCTSBase):
             npl = node_pool.setdefault(board, {})
             lpl = left_pool.setdefault(board, set())
             for key, nodeConfig in nodeConfigs.items():
-                Node.from_config(nodeConfig, key, npl, lpl, delete_threshold,
-                                 tuple_table, action_table, value_table)
+                node_cls.from_config(nodeConfig, key, npl, lpl, delete_threshold,
+                                     tuple_table, action_table, value_table)
             boards.append(board)
 
         for key, tpl in config['keys2tuples'].items():
