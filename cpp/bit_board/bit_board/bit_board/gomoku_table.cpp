@@ -127,9 +127,9 @@ U64 get_key(int gomoku_type, bool is_player, int cache_counts[RANGE], int cache_
 	return key;
 }
 
-int INSTRintMENT_VALUE;
+int INSTRUMENT_VALUE;
 
-int cache_hash(U64 key, int &value = INSTRintMENT_VALUE)
+int cache_hash(U64 key, int &value = INSTRUMENT_VALUE)
 {
 	static int hash_table[HASH_CONTAINER] = { 0 };
 	static U64 key_table[HASH_CONTAINER];
@@ -146,7 +146,7 @@ int cache_hash(U64 key, int &value = INSTRintMENT_VALUE)
 		}
 	}
 
-	if (&value == &INSTRintMENT_VALUE)
+	if (&value == &INSTRUMENT_VALUE)
 	{
 		return -1;
 	}

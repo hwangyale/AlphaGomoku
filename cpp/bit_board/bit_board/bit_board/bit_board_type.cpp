@@ -43,9 +43,9 @@ bool check_single_action(BitBoard &board, UC action, UC direction,
 {
 	int center, _count = 0, tmp_action;
 	static int _container[BOARD_SIZE];
-	GBIT line = board.get_line(action, direction, center);
+	GBIT &line = board.get_line(action, direction, center);
 	GBIT &mask = TABLE.get_mask(action, direction);
-	GBIT masked_line = mask & line;
+	GBIT &masked_line = mask & line;
 
 	bool flag = GOMOKU_TYPE_TABLE.get_actions(is_player, gomoku_type, masked_line, 
 											  _container, 0, _count);
@@ -72,6 +72,8 @@ void set_continue_stones(BitBoard &board, int action, int direction, int color,
 {
 	int center, tmp_position, tmp_action;
 	GBIT &line = board.get_line((UC)action, (UC)direction, center);
+	GBIT &mask = TABLE.get_mask(action, direction);
+	GBIT &masked_line = mask & line;
 	MOVE &move_func = move_list[direction];
 	for (int sign = -1; sign <= 1; sign += 2)
 	{
@@ -82,10 +84,10 @@ void set_continue_stones(BitBoard &board, int action, int direction, int color,
 			{
 				break;
 			}
-			if (line[2 * tmp_position] == 0) break;
-			if (line[2 * tmp_position + 1] != color) break;
+			if (masked_line[2 * tmp_position] == 0) break;
+			if (masked_line[2 * tmp_position + 1] != color) break;
 			tmp_action = move_func(action, sign * d);
-			if (tmp_action < 0 || tmp_action >= STONES) break;
+			//if (tmp_action < 0 || tmp_action >= STONES) break;
 			searched.set(tmp_action);
 		}
 	}

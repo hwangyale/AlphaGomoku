@@ -144,3 +144,6 @@ __backup__
 
 # igore raw data
 __raw_data__
+
+# ignore hash table
+gomoku_hash_table.txt
