@@ -10,6 +10,7 @@ from ...utils.board_utils import tensor_functions
 from ...utils.board_utils import recover_action_functions
 from ...utils.board_utils import recover_tensor_functions
 from ...utils.json_utils import json_load_tuple, json_dump_tuple
+from .weights import get_weight_file
 
 
 rng = np.random
@@ -94,18 +95,28 @@ class Base(object):
             raise Exception('not found weight file, the weights saved')
         self.network.load_weights(filepath, by_name=True)
 
-    def get_config(self):
+    def get_config(self, with_weights=False, pattern=None, index=None):
         network_config = self.network.get_config()
-        return {'batch_size': self.batch_size, 'network_config': network_config}
+        config = {'batch_size': self.batch_size, 'network_config': network_config}
+        if with_weights:
+            config['weights'] = {'pattern': pattern, 'index': index}
+        return config
 
     @classmethod
     def from_config(cls, config):
         network_config = config.pop('network_config')
         network = KE.Model.from_config(network_config)
-        return cls(network=network, **config)
+        weights = config.pop('weights', None)
+        object = cls(network=network, **config)
+        if weights is not None:
+            pattern = weights['pattern']
+            network_name = network.name
+            index = weights['index']
+        object.load_weights(get_weight_file(pattern, network_name, index))
+        return object
 
-    def save_config(self, file_path):
-        config = self.get_config()
+    def save_config(self, file_path, with_weights=False, pattern=None, index=None):
+        config = self.get_config(with_weights, pattern, index)
         json_dump_tuple(config, file_path)
 
     @classmethod

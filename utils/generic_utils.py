@@ -1,4 +1,4 @@
-__all__ = ['ProgBar']
+__all__ = ['ProgBar', 'serialize_object', 'deserialize_object']
 import sys
 import time
 
@@ -37,6 +37,18 @@ class ProgBar(object):
             time_per_step = (total_time / self.steps) * 1000
             print(' {:.0f}s {:.0f}ms/step'.format(total_time, time_per_step))
 
+
+def serialize_object(instance, *args, **kwargs):
+    return {
+        'class_name': instance.__class__.__name__,
+        'config': instance.get_config(*args, **kwargs)
+    }
+
+def deserialize_object(config, module_objects):
+    class_name = config['class_name']
+    if class_name not in module_objects:
+        raise ValueError('Unknown class name: {}'.format(class_name))
+    return module_objects[class_name].from_config(config['config'])
 
 if __name__ == '__main__':
     progbar = ProgBar(1000)
