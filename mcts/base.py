@@ -1,6 +1,7 @@
 import numpy as np
 from ..global_constants import *
 from ..common import *
+from ..utils.thread_utils import CONDITION
 from ..board import Board
 from ..cpp import CPPBoard
 from ..utils.zobrist_utils import get_zobrist_key, hash_history
@@ -138,9 +139,21 @@ class MCTSBoard(Board):
 
 
 class Node(object):
-    def __init__(self, zobristKey, node_pool,
-                 left_pool, delete_threshold,
-                 tuple_table, action_table, value_table):
+    def __init__(self, zobristKey=None, node_pool=None,
+                 left_pool=None, delete_threshold=None,
+                 tuple_table=None, action_table=None,
+                 value_table=None, add_to_tree=True):
+        self.initialized = False
+        if add_to_tree:
+            self.add_to_tree(zobristKey, node_pool,
+                             left_pool, delete_threshold,
+                             tuple_table, action_table, value_table)
+        else:
+            self.initialize()
+
+    def add_to_tree(self, zobristKey, node_pool,
+                    left_pool, delete_threshold,
+                    tuple_table, action_table, value_table):
         if zobristKey not in node_pool:
             node_pool[zobristKey] = self
             self.zobristKey = zobristKey
@@ -150,7 +163,8 @@ class Node(object):
             self.tuple_table = tuple_table
             self.action_table = action_table
             self.value_table = value_table
-            self.initialize()
+            if not self.initialized:
+                self.initialize()
         elif node_pool[zobristKey].N_r > delete_threshold:
             left_pool.add(zobristKey)
 
@@ -163,6 +177,7 @@ class Node(object):
         self.W_v = 0.0
         self.N_r = 0.0
         self.N_v = 0.0
+        self.initialized = True
 
     def reset(self):
         self.indice2parents = {}
@@ -290,9 +305,91 @@ class Node(object):
         return config
 
     @classmethod
-    def from_config(cls, config, zobristKey, node_pool,
-                    left_pool, delete_threshold,
-                    tuple_table, action_table, value_table):
-        cls(zobristKey, node_pool, left_pool, delete_threshold,
-            tuple_table, action_table, value_table)
-        cls.__dict__.update(config)
+    def from_config(cls, config):
+        node = cls(add_to_tree=False)
+        node.__dict__.update(config)
+        return node
+
+
+class MCTSBase(object):
+    def __init__(self, traverse_time, c_puct=None,
+                 thread_number=4, delete_threshold=10,
+                 condition=None):
+        self.traverse_time = traverse_time
+        self.c_puct = MCTS_C_PUCT if c_puct is None else c_puct
+        self.thread_number = thread_number
+        self.delete_threshold = delete_threshold
+        self.node_pools = []
+        self.left_pools = []
+        self.tuple_table = {}
+        self.action_table = {}
+        self.value_table = {}
+        self.condition = CONDITION if condition is None else condition
+        self.board_indice = {}
+
+    def get_board_index(self, board):
+        return self.board_indice.setdefault(board, len(self.board_indice))
+
+    def get_node_pool(self, board):
+        index = self.get_board_index(board)
+        while index >= len(self.node_pools):
+            self.node_pools.append(dict())
+        return self.node_pools[index]
+
+    def get_left_pool(self, board):
+        index = self.get_board_index(board)
+        while index >= len(self.left_pools):
+            self.left_pools.append(set())
+        return self.left_pools[index]
+
+    def get_config(self):
+        config = {
+            'traverse_time': self.traverse_time,
+            'c_puct': self.c_puct,
+            'thread_time': self.thread_number,
+            'delete_threshold': self.delete_threshold,
+            'condition': None
+        }
+
+        config['board_indice'] = [(board.get_config(), idx)
+                                  for board, idx in self.board_indice.items()]
+        config['node_pools'] = [{key: node.get_config() for key, node in npl.items()}
+                                for npl in self.node_pools]
+        config['tuple_table'] = {key: tpl for key, tpl in self.tuple_table.items()}
+        config['action_table'] = {key: action for key, action in self.action_table.items()}
+        config['value_table'] = {key: value for key, value in self.value_table.items()}
+
+        return config
+
+    @classmethod
+    def from_config(cls, config, board_cls=Board, node_cls=Node):
+        tree = cls(
+            traverse_time=config['traverse_time'],
+            c_puct=config['c_puct'],
+            thread_number=config['thread_number'],
+            delete_threshold=config['delete_threshold'],
+            condition=config['condition']
+        )
+
+        delete_threshold = tree.delete_threshold
+        tuple_table = tree.tuple_table
+        action_table = tree.action_table
+        value_table = tree.value_table
+
+        boards = []
+        for board_config, index in config['board_indice']:
+            board = board_cls.from_config(board_config)
+            tree.board_indice[board] = index
+            node_pool = tree.get_node_pool(board)
+            left_pool = tree.get_left_pool(board)
+            for key, node_config in config['node_pools'][index]:
+                node = node_cls.from_config(node_config)
+                node.add_to_tree(key, node_pool, left_pool, delete_threshold,
+                                 tuple_table, action_table, value_table)
+            boards.append(board)
+
+        tuple_table.update(config['tuple_table'])
+        action_table.update(config['action_table'])
+        value_table.update(config['value_table'])
+
+        return tree, boards

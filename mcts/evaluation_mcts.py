@@ -7,7 +7,7 @@ from ..board import Board
 from ..utils.thread_utils import CONDITION
 from ..utils.zobrist_utils import get_zobrist_key
 from ..utils.generic_utils import ProgBar
-from .base import MCTSBoard, Node
+from .base import MCTSBoard, Node, MCTSBase
 
 class EvaluationTraversal(threading.Thread):
     def __init__(self, traversalQueue, updateQueue,
@@ -54,21 +54,10 @@ class EvaluationTraversal(threading.Thread):
                 condition.release()
 
 
-class EvaluationMCTSBase(object):
-    def __init__(self, mixture_network,
-                 traverse_time, c_puct=None, thread_number=4,
-                 delete_threshold=10, condition=None):
+class EvaluationMCTS(MCTSBase):
+    def __init__(self, mixture_network, *args, **kwargs):
         self.mixture_network = mixture_network
-        self.traverse_time = traverse_time
-        self.c_puct = MCTS_C_PUCT if c_puct is None else c_puct
-        self.thread_number = thread_number
-        self.delete_threshold = delete_threshold
-        self.node_pool = {}
-        self.left_pool = set()
-        self.tuple_table = {}
-        self.action_table = {}
-        self.value_table = {}
-        self.condition = CONDITION if condition is None else condition
+        super(EvaluationMCTS, self).__init__(*args, **kwargs)
 
     def traverse(self, board, root, traversalQueue,
                  updateQueue, start=True):
@@ -119,150 +108,9 @@ class EvaluationMCTSBase(object):
             if progbar is not None:
                 progbar.update()
 
-    def mcts(self, board, verbose=1):
-        board = MCTSBoard(board, True)
-        traverse_time = self.traverse_time
-        node_pool = self.node_pool
-        left_pool = self.left_pool
-        condition = self.condition
-
-        Node(board.zobristKey, node_pool, left_pool,
-             self.delete_threshold, self.tuple_table, self.action_table,
-             self.value_table)
-        root = self.node_pool[board.zobristKey]
-        root.estimate(board)
-
-        if self.value_table[board.zobristKey] is not None:
-            actions = self.action_table[board.zobristKey]
-            return actions[np.random.randint(len(actions))]
-
-        if verbose:
-            progbar = ProgBar(traverse_time)
-            progbar.initialize()
-        else:
-            progbar = None
-        total_count = 0
-        traversalQueue = queue.Queue()
-        updateQueue = queue.Queue()
-        self.traverse(board, root, traversalQueue,
-                      updateQueue, True)
-        while True:
-            tuples = []
-            condition.acquire()
-            while not updateQueue.empty():
-                tuples.append(updateQueue.get_nowait())
-            if len(tuples) == 0:
-                condition.release()
-                continue
-            left_tuples = self.update_nowait(tuples, progbar)
-            total_count += len(tuples) - len(left_tuples)
-            if total_count == traverse_time:
-                condition.notifyAll()
-                condition.release()
-                break
-            elif len(left_tuples) == 0:
-                condition.notifyAll()
-                condition.release()
-                continue
-
-            self.expand_and_update(left_tuples, progbar)
-            total_count += len(left_tuples)
-            condition.notifyAll()
-            condition.release()
-            if total_count == traverse_time:
-                break
-
-        action = self.process_root(root)
-
-        pairs = [(key, node_pool[key]) for key in self.left_pool]
-        self.left_pool.clear()
-        self.node_pool.clear()
-        for key, node in pairs:
-            node.reset()
-            self.node_pool[key] = node
-
-        return action
-
-    def process_root(self, root):
-        zobristKey = root.zobristKey
-        tuples = self.tuple_table[zobristKey]
-        max_action = None
-        max_visit = 0.0
-        for key, action, _ in tuples:
-            node = self.node_pool[key]
-            if node.N_r > max_visit:
-                max_visit = node.N_r
-                max_action = action
-        print('visit time: {}'.format(int(max_visit)))
-        return max_action
-
-    def get_virtual_value_function(self, index):
-        return MCTS_VIRTUAL_LOSS, MCTS_VIRTUAL_VISIT
-
-    def get_config(self):
-        config = {
-            'traverse_time': self.traverse_time,
-            'c_puct': self.c_puct,
-            'thread_time': self.thread_number,
-            'delete_threshold': self.delete_threshold,
-            'condition': None
-        }
-
-        keys2nodeConfigs = {key: node.get_config()
-                            for key, node in self.node_pool.items()}
-        config['keys2nodeConfigs'] = keys2nodeConfigs
-
-        config['keys2tuples'] = {key: tpl for key, tpl in self.tuple_table.items()}
-        config['keys2actions'] = {key: action for key, action in self.action_table.items()}
-        config['keys2values'] = {key: value for key, value in self.value_table.items()}
-
-        return config
-
-    @classmethod
-    def from_config(cls, config, mixture_network):
-        tree = cls(
-            mixture_network,
-            traverse_time=config['traverse_time'],
-            c_puct=config['c_puct'],
-            thread_number=config['thread_number'],
-            delete_threshold=config['delete_threshold'],
-            condition=config['condition']
-        )
-
-        node_pool = tree.node_pool
-        left_pool = tree.left_pool
-        delete_threshold = tree.delete_threshold
-        tuple_table = tree.tuple_table
-        action_table = tree.action_table
-        value_table = tree.value_table
-
-        for key, nodeConfig in config['keys2nodeConfigs'].items():
-            Node.from_config(nodeConfig, key, node_pool,
-                             left_pool, delete_threshold,
-                             tuple_table, action_table, value_table)
-
-        for key, tpl in config['keys2tuples'].items():
-            tuple_table[key] = tpl
-
-        for key, actions in config['keys2actions'].items():
-            action_table[key] = actions
-
-        for key, value in config['keys2values'].items():
-            value_table[key] = value
-
-        return tree
-
-
-class EvaluationMCTS(EvaluationMCTSBase):
-    def __init__(self, *args, **kwargs):
-        super(EvaluationMCTS, self).__init__(*args, **kwargs)
-        self.left_pool = {}
-
     def mcts(self, boards, verbose=1, node_cls=Node):
         boards = tolist(boards)
         traverse_time = self.traverse_time
-        node_pool = self.node_pool
-        left_pool = self.left_pool
         condition = self.condition
         value_table = self.value_table
         action_table = self.action_table
@@ -270,12 +118,13 @@ class EvaluationMCTS(EvaluationMCTSBase):
         roots = {}
         actions = {}
         for board in boards:
+            node_pool = self.get_node_pool(board)
             node_cls(board.zobristKey,
-                     node_pool.setdefault(board, {}),
-                     left_pool.setdefault(board, set()),
+                     node_pool,
+                     self.get_left_pool(board),
                      self.delete_threshold, self.tuple_table,
                      self.action_table, self.value_table)
-            root = node_pool[board][board.zobristKey]
+            root = node_pool[board.zobristKey]
             root.estimate(MCTSBoard(board, True))
             if value_table[board.zobristKey] is not None:
                 actions[board] = self.process_root(board, root)
@@ -329,15 +178,15 @@ class EvaluationMCTS(EvaluationMCTSBase):
                 break
 
         for board in traverse_boards:
-            npl = node_pool[board]
-            lpl = left_pool[board]
+            node_pool = self.get_node_pool(board)
+            left_pool = self.get_left_pool(board)
             actions[board] = self.process_root(board, root)
-            pairs = [(key, npl[key]) for key in lpl]
-            lpl.clear()
-            npl.clear()
+            pairs = [(key, node_pool[key]) for key in left_pool]
+            left_pool.clear()
+            node_pool.clear()
             for key, node in pairs:
                 node.reset()
-                npl[key] = node
+                node_pool[key] = node
 
         return tosingleton([actions[board] for board in boards])
 
@@ -349,7 +198,7 @@ class EvaluationMCTS(EvaluationMCTSBase):
         tuples = self.tuple_table[zobristKey]
         max_action = None
         max_visit = 0.0
-        node_pool = self.node_pool[board]
+        node_pool = self.get_node_pool(board)
         for key, action, _ in tuples:
             node = node_pool[key]
             if node.N_r > max_visit:
@@ -357,67 +206,9 @@ class EvaluationMCTS(EvaluationMCTSBase):
                 max_action = action
         return max_action
 
-    def get_config(self):
-        config = {
-            'traverse_time': self.traverse_time,
-            'c_puct': self.c_puct,
-            'thread_time': self.thread_number,
-            'delete_threshold': self.delete_threshold,
-            'condition': None
-        }
-
-        nodes = []
-        for board, npl in self.node_pool.items():
-            pairs = (
-                board.get_config(),
-                {key: node.get_config() for key, node in npl.items()}
-            )
-            nodes.append(pairs)
-
-        config['nodes'] = nodes
-
-        config['keys2tuples'] = {key: tpl for key, tpl in self.tuple_table.items()}
-        config['keys2actions'] = {key: action for key, action in self.action_table.items()}
-        config['keys2values'] = {key: value for key, value in self.value_table.items()}
-
-        return config
+    def get_virtual_value_function(self, index):
+        return MCTS_VIRTUAL_LOSS, MCTS_VIRTUAL_VISIT
 
     @classmethod
-    def from_config(cls, config, mixture_network, board_cls=Board,
-                    node_cls=Node):
-        tree = cls(
-            mixture_network,
-            traverse_time=config['traverse_time'],
-            c_puct=config['c_puct'],
-            thread_number=config['thread_number'],
-            delete_threshold=config['delete_threshold'],
-            condition=config['condition']
-        )
-
-        node_pool = tree.node_pool
-        left_pool = tree.left_pool
-        delete_threshold = tree.delete_threshold
-        tuple_table = tree.tuple_table
-        action_table = tree.action_table
-        value_table = tree.value_table
-
-        boards = []
-        for board_config, nodeConfigs in config['nodes']:
-            board = board_cls.from_config(board_config)
-            npl = node_pool.setdefault(board, {})
-            lpl = left_pool.setdefault(board, set())
-            for key, nodeConfig in nodeConfigs.items():
-                node_cls.from_config(nodeConfig, key, npl, lpl, delete_threshold,
-                                     tuple_table, action_table, value_table)
-            boards.append(board)
-
-        for key, tpl in config['keys2tuples'].items():
-            tuple_table[key] = tpl
-
-        for key, actions in config['keys2actions'].items():
-            action_table[key] = actions
-
-        for key, value in config['keys2values'].items():
-            value_table[key] = value
-
-        return tree, boards
+    def from_config(cls, *args, **kwargs):
+        return super(EvaluationMCTS, cls).from_config(*args, **kwargs)
