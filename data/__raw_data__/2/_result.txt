@@ -1,0 +1,20 @@
+-------------------------------------
+2018/12/10  12:22 - 21:59
+Time for turn: 60 s,   Time for match: 3600 s
+Tolerance: 1 s,   Memory: 1024 MB
+Openings: start from 1, used 50000000, available 200
+Rule: five or more stones wins
+Opening CRC: 4512c4fb
+Games played: 167  (0%)
+-------------------------------------
+
+Yixin17_64
+wins: 87=60+27,   losses: 80=24+56
+time/turn: 4915 ms (max: 60.0 s),  time/game: 83 s
+moves/game: 17,  CRC: f65ebb5a,   memory: 294.38 MB
+
+Yixin17_64
+wins: 80=56+24,   losses: 87=27+60
+time/turn: 5183 ms (max: 60.0 s),  time/game: 88 s
+moves/game: 17,  CRC: f65ebb5a,   memory: 281.61 MB
+

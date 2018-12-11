@@ -142,8 +142,8 @@ venv.bak/
 # igore backup
 __backup__
 
-# igore raw data
-__raw_data__
+# igore pre data
+data/pre
 
 # ignore hash table
 gomoku_hash_table.txt
