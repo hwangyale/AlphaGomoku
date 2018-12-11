@@ -89,8 +89,10 @@ class TrainerBase(object):
             json_dump_tuple(self.compile_params, self.get_compile_path())
             json_dump_tuple(self.network.get_config(), self.get_network_path()[0])
             folder = self.get_cache_folder()
-            kwargs['callbacks'] = [CacheCallback(self.get_begin_save(),
-                                   self.get_epoch_save(), folder)]
+            if 'callbacks' not in kwargs:
+                kwargs['callbacks'] = []
+            kwargs['callbacks'] += [CacheCallback(self.get_begin_save(),
+                                    self.get_epoch_save(), folder)]
         kwargs.pop('batch_size')
         return self.network.fit_generator(**kwargs).history
 
