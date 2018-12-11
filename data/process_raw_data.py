@@ -24,7 +24,7 @@ def process_rec():
             history_container.append(history)
     return history_container
 
-def main(index, max_number=100000):
+def main(index, max_number=150000):
     history_container = process_rec()
     tuples = process_history(history_container, True)
     indice = list(range(len(tuples)))
