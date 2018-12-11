@@ -30,7 +30,7 @@ def main(index):
         if epoch <= 160:
             return 0.002
         return 0.0004
-    callbacks = [LearningRateScheduler(scheduler), Stop(0.7, 0.02)]
+    callbacks = [LearningRateScheduler(scheduler), Stop(0.16, 0.5)]
 
     config_file_path = get_config_file('pre', resnet.name, index)
     weight_file_path = get_weight_file('pre', resnet.name, index)
