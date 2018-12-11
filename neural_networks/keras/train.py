@@ -98,16 +98,26 @@ class TrainerBase(object):
         def save():
             self.train_config_file = self.get_train_path()
             json_dump_tuple(self.train_params, self.train_config_file)
-            self.optimizer.save_weights(self.get_optimizer_path()[1])
-            self.network.save_weights(self.get_network_path()[1])
+            optimizer_weight_file = self.get_optimizer_path()[1]
+            self.optimizer.save_weights(optimizer_weight_file)
+            self.cache_optimizer_weight_file = optimizer_weight_file
+            network_weight_file = self.get_network_path()[1]
+            self.network.save_weights(network_weight_file)
+            self.cache_network_weight_file = network_weight_file
         return save
 
     def get_epoch_save(self):
         def save():
             self.train_params['initial_epoch'] += 1
-            self.optimizer.save_weights(self.get_optimizer_path()[1])
-            self.network.save_weights(self.get_network_path()[1])
+            optimizer_weight_file = self.get_optimizer_path()[1]
+            self.optimizer.save_weights(optimizer_weight_file)
+            network_weight_file = self.get_network_path()[1]
+            self.network.save_weights(network_weight_file)
             json_dump_tuple(self.train_params, self.train_config_file)
+            os.remove(self.cache_optimizer_weight_file)
+            self.cache_optimizer_weight_file = optimizer_weight_file
+            os.remove(self.cache_network_weight_file)
+            self.cache_network_weight_file = network_weight_file
         return save
 
     @classmethod

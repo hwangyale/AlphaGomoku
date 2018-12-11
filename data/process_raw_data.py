@@ -1,4 +1,5 @@
 import os
+import numpy as np
 from AlphaGomoku.process_data import process_history
 from AlphaGomoku.utils.json_utils import json_dump_tuple
 
@@ -23,9 +24,12 @@ def process_rec():
             history_container.append(history)
     return history_container
 
-def main(index):
+def main(index, max_number=100000):
     history_container = process_rec()
     tuples = process_history(history_container, True)
+    indice = list(range(len(tuples)))
+    np.random.shuffle(indice)
+    tuples = [tuples[idx] for idx in indice[:max_number]]
     print('the number of tuples: {}'.format(len(tuples)))
     json_dump_tuple(tuples, os.path.join(path, 'pre', '{}.json'.format(index)))
 

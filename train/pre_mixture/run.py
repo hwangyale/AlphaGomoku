@@ -7,7 +7,7 @@ from AlphaGomoku.train.common import get_trainer
 from AlphaGomoku.data import get_data_file
 from AlphaGomoku.utils.json_utils import json_dump_tuple
 
-def main():
+def main(index):
     resnet_mixture = ResNetMixture(stack_nb=2)
     resnet = resnet_mixture.network
     trainer = get_trainer(PreMixtureTrainer, resnet, 0, get_data_file('pre', 0),
@@ -22,8 +22,8 @@ def main():
         return 0.0004
     callbacks = [LearningRateScheduler(scheduler)]
 
-    config_file_path = get_config_file('pre', resnet.name, 0)
-    weight_file_path = get_weight_file('pre', resnet.name, 0)
+    config_file_path = get_config_file('pre', resnet.name, index)
+    weight_file_path = get_weight_file('pre', resnet.name, index)
 
     trainer.train(True, 0.9, callbacks=callbacks)
 
@@ -31,4 +31,4 @@ def main():
     resnet.save_weights(weight_file_path)
 
 if __name__ == '__main__':
-    main()
+    main(1)
