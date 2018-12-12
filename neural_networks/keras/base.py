@@ -92,7 +92,7 @@ class Base(object):
 
     def load_weights(self, filepath):
         if not os.path.exists(filepath):
-            raise Exception('not found weight file, the weights saved')
+            raise Exception('not found weight file')
         self.network.load_weights(filepath, by_name=True)
 
     def get_config(self, with_weights=False, pattern=None, index=None):

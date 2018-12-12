@@ -1,9 +1,8 @@
-__all__ = ['get']
+from ...utils.generic_utils import deserialize_object
 from .rollout_mcts import *
 from .evaluation_mcts import *
 from .rl_evaluation_mcts import *
 
-all = globals()
-
-def get(obj_name):
-    return all[obj]
+def get(config):
+    glos = globals()
+    return deserialize_object(config, glos)

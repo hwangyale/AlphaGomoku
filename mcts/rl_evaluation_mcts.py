@@ -7,6 +7,7 @@ from ..board import Board
 from ..utils.thread_utils import CONDITION
 from ..utils.zobrist_utils import get_zobrist_key
 from ..utils.generic_utils import ProgBar
+from ..process_data import tuples_to_json, json_to_tuples
 from .base import MCTSBoard, Node
 from .evaluation_mcts import EvaluationTraversal, EvaluationMCTS
 
@@ -132,7 +133,7 @@ class RLEvaluationMCTS(EvaluationMCTS):
         visits = []
         for key, action, _ in self.tuple_table[root.zobristKey]:
             node = node_pool[key]
-            visits.append((action, node.N_r))
+            visits.append((action, int(node.N_r)))
             if step >= MCTS_RL_SAMPLE_STEP and node.N_r > max_visit:
                 max_visit = node.N_r
                 max_action = action
@@ -145,15 +146,17 @@ class RLEvaluationMCTS(EvaluationMCTS):
         else:
             return max_action
 
-## TODO:
     def get_config(self):
         config = super(RLEvaluationMCTS, self).get_config()
-        config['visit_container'] = self.visit_container
+        config['visit_container'] = [tuples_to_json(visits)
+                                     for visits in self.visit_container]
         return config
 
     @classmethod
     def from_config(cls, config, *args, **kwargs):
         visit_container = config.pop('visit_container')
+        kwargs['node_cls'] = RLNode
         mcts = super(RLEvaluationMCTS, cls).from_config(config, *args, **kwargs)
-        mcts.visit_container = visit_container
+        mcts.visit_container = [json_to_tuples(visits)
+                                for visits in visit_container]
         return mcts
