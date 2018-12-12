@@ -15,9 +15,9 @@ class ProgBar(object):
         sys.stdout.flush()
         self.start = time.time()
 
-    def update(self):
+    def update(self, step=1, show=''):
         print('\r' + ' ' * (79) + '\r', end='')
-        self.step += 1
+        self.step += step
         percent = self.step / float(self.steps)
         print('{:>6.2f}% |'.format(percent * 100), end='')
         tmp_length = int(percent * self.length)
@@ -28,9 +28,11 @@ class ProgBar(object):
         elif self.step < self.steps:
             print('>', end='')
         print('|', end='')
-        left_time = (time.time() - self.start) * (self.steps - self.step) / float(self.step)
+        left_time = (time.time() - self.start) * (self.steps - self.step) / (float(self.step) + 1e-10)
         if self.step < self.steps:
             print(' ETA: {:.0f}s'.format(left_time), end='')
+            if show != '':
+                print(' {}'.format(show), end='')
             sys.stdout.flush()
         else:
             total_time = time.time() - self.start
@@ -51,8 +53,10 @@ def deserialize_object(config, module_objects):
     return module_objects[class_name].from_config(config['config'])
 
 if __name__ == '__main__':
+    import numpy as np
+    rng = np.random
     progbar = ProgBar(1000)
     for _ in range(1000):
-        progbar.update()
+        progbar.update(rng.randint(2))
         time.sleep(0.01)
     print('finished!')

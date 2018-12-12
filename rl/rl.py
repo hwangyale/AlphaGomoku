@@ -5,8 +5,13 @@ from ..common import *
 from ..board import Board
 from ..mcts import get as mcts_get
 from ..neural_networks.keras import get as network_get
+from ..neural_networks.keras.train import TrainerBase
 from ..neural_networks.weights import get_config_file, get_weight_file
+from ..utils.generic_utils import ProgBar
 from ..utils.json_utils import json_dump_tuple, json_load_tuple
+from ..utils.board_utils import tensor_functions
+from ..utils.keras_utils import optimizer_wrapper, CacheCallback
+from ..temp import get_cache_folder, remove_folder
 
 
 rng = np.random
@@ -49,43 +54,13 @@ class SelfPlayBase(object):
         raise NotImplementedError('`get_samples_from_mcts` has not '
                                   'been implemented')
 
-    def get_tensor_from_history(self, history):
-        tensor = np.zeros((BOARD_SIZE, BOARD_SIZE, 3), dtype=FLOATX) \
-                 +np.array([[[0, 0, 1]]])
-        player = BLACK if len(history) % 2 == 0 else WHITE
-        color = BLACK
-        for action in history:
-            if color == player:
-                tensor[action+(0, )] = 1.0
-            else:
-                tensor[action+(1, )] = 1.0
-            tensor[action+(2, )] = 0.0
-            color = player_map(color)
-        return tensor
-
-    def get_tensor_from_visits(self, visits, get_max):
-        tensor = np.zeros((BOARD_SIZE, BOARD_SIZE), dtype=FLOATX)
-        if get_max:
-            max_action = None
-            max_visit = 0
-            for action, visit in visits:
-                if visit > max_visit:
-                    max_action = action
-                    max_visit = visit
-            tensor[max_action] = 1.0
-        else:
-            s = float(sum([visit for _, visit in visits]))
-            for action, visit in visits:
-                tensor[action] = visit / s
-        return tensor
-
-    def get_samples(self):
+    def get_raw_samples(self):
         if not hasattr(self, 'raw_samples'):
             raise Exception('Self-play has not been finished')
-        return self.process_raw_samples(self.raw_samples)
+        return self.raw_samples
 
     def process_raw_samples(self, raw_samples):
-        raise NotImplemented('`process_raw_samples` has not been implemented')
+        raise NotImplementedError('`process_raw_samples` has not been implemented')
 
     def get_config(self):
         config = [
@@ -131,18 +106,6 @@ class EvaluationSelfPlay(SelfPlayBase):
                     value = MCTS_LOSS_VALUE
                 tuples.append((history, visits, value))
         return tuples
-
-    def process_raw_samples(self, raw_samples):
-        board_tensors = []
-        action_tensors = []
-        values = []
-        for history, visits, value in raw_samples:
-            board_tensor.append(self.get_tensor_from_history(history))
-            action_tensors.append(
-                self.get_tensor_from_visits(visits, len(history)>=MCTS_RL_SAMPLE_STEP)
-            )
-            values.append(value)
-        return board_tensors, action_tensors, values
 
     def get_config(self, index):
         config = super(EvaluationSelfPlay, self).get_config()
@@ -200,8 +163,152 @@ class Evaluator(object):
         yield step, finished, win, loss, draw
 
 
-class TrainerGenerator(object):
-    def __init__(self, )
+class RLTrainerBase(TrainerBase):
+    def get_tensor_from_visits(self, visits, get_max):
+        tensor = np.zeros((BOARD_SIZE, BOARD_SIZE), dtype=FLOATX)
+        if get_max:
+            max_action = None
+            max_visit = 0
+            for action, visit in visits:
+                if visit > max_visit:
+                    max_action = action
+                    max_visit = visit
+            tensor[max_action] = 1.0
+        else:
+            s = float(sum([visit for _, visit in visits]))
+            for action, visit in visits:
+                tensor[action] = visit / s
+        return tensor
 
-def main_loop():
-    pass
+    def get_validation_data(self):
+        return None
+
+
+class EvaluationTrainer(RLTrainerBase):
+    def get_loss(self):
+        return {'distribution': 'categorical_crossentropy',
+                'value': 'mean_squared_error'}
+
+    def get_metrics(self):
+        return {'distribution': 'acc'}
+
+    def get_loss_weights(self):
+        return {'distribution': 1.0, 'value': 1.0}
+
+    def process_raw_samples(self, raw_samples):
+        board_tensors = []
+        action_tensors = []
+        values = []
+        for history, visits, value in raw_samples:
+            board_tensor.append(self.get_tensor_from_history(history))
+            action_tensors.append(
+                self.get_tensor_from_visits(visits, len(history)>=MCTS_RL_SAMPLE_STEP)
+            )
+            values.append(value)
+        return board_tensors, action_tensors, values
+
+    def get_generator(self, cache, batch_size, split):
+        self.load_tuples(False, 1.0)
+        raw_samples = self.tuple_container[0]
+        board_tensors, action_tensors, values = self.process_raw_samples(raw_samples)
+        def generator():
+            number = len(raw_samples)
+            batches = KE.training._make_batches(number, batch_size)
+            while True:
+                indice = list(range(number))
+                np.random.shuffle(indice)
+                for batch_begin, batch_end in batches:
+                    Xs = []
+                    Ys = []
+                    Zs = np.zeros((batch_end-batch_begin, 1), dtype=FLOATX)
+                    for idx, index in enumerate(indice[batch_begin:batch_end]):
+                        board_tensor = board_tensors[index]
+                        action_tensor = action_tensors[index]
+                        value = values[index]
+                        tensor_func = tensor_functions[np.random.randint(8)]
+                        Xs.append(np.expand_dims(tensor_func(board_tensor), 0))
+                        Ys.append(np.reshape(tensor_func(action_tensor), (1, -1)))
+                        Zs[idx, 0] = value
+                    yield np.concatenate(Xs, axis=0), [np.concatenate(Ys, axis=0), Zs]
+        return generator(), (len(tuples) + batch_size - 1) // batch_size
+
+    def get_cache_folder(self):
+        get_cache_folder('rl_mixture')
+        return get_cache_folder('rl_mixture\\{}'.format(self.network.name))
+
+
+class MainLoopBase(object):
+    def __init__(self, network, **kwargs):
+        self.network = network
+        defaults = {
+            'self_play_mcts_config': {
+                'traverse_time': 500, 'c_puct': None,
+                'thread_number': 1, 'delete_threshold': 10
+            },
+            'self_play_number': 1000,
+            'self_play_batch_size': 20,
+            'self_play_cache_step': 10,
+            'evaluate_number': 100,
+            'win_ratio': 0.55,
+            'train_batch_size': 128,
+            'train_epochs': 100
+        }
+        defaults.update(kwargs)
+        self.config = defaults
+        self.state = 0
+        self.index = 0
+
+    def run(self):
+        raise NotImplementedError('`run` has not been implemented')
+
+    def copy_network(self, network):
+        folder = self.get_cache_folder()
+        while True:
+            weight_file = os.path.join(folder, '{}.npz'.format(rng.randint(2**32)))
+            if os.path.exists(weight_file):
+                continue
+        config = network.get_config()
+        copy_network = KE.Model.from_config(config)
+        network.save_weights(weight_file)
+        copy_network.load_weights(weight_file)
+        os.remove(weight_file)
+        return copy_network
+
+    def get_cache_folder(self):
+        raise NotImplementedError('`get_cache_folder` has not been implemented')
+
+    def get_cache_self_play_path(self):
+        folder = self.get_cache_folder()
+        return os.path.join(folder, 'self_play.json')
+
+
+class EvaluationMainLoop(MainLoopBase):
+    def run(self, load_cache):
+        if load_cache:
+            pass
+        else:
+            state = self.state
+            best_network = self.network
+            config = self.config
+            index = self.index
+        self_play_file = self.get_cache_self_play_path()
+        while True:
+            if state == 0:
+                mcts = RLEvaluationMCTS(self.copy_network(self.best_network),
+                                        **config['self_play_mcts_config'])
+                sf = EvaluationSelfPlay(mcts, config['self_play_number'],
+                                        config['self_play_batch_size'])
+                print('self-play:')
+                progbar = ProgBar(config['self_play_number'])
+                pre_finished = 0
+                for step, finished in sf.generator():
+                    if step % config['self_play_cache_step'] == 0:
+                        config = sf.get_config(index)
+                        json_dump_tuple(config, self_play_file)
+                        state = 1
+                    progbar.update(finished-pre_finished, 'step: {}'.format(step))
+                    pre_finished = finished
+
+
+    def get_cache_folder(self):
+        return get_cache_folder('rl_mixture')

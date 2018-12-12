@@ -12,37 +12,8 @@ from .weights import get_config_file, get_weight_file
 from ...utils.board_utils import action_functions, tensor_functions
 from ...process_data import process_history
 from ...process_data import tuples_to_json, json_to_tuples
+from ...utils.keras_utils import optimizer_wrapper, CacheCallback
 
-def optimizer_wrapper(optimizer):
-    if not isinstance(optimizer, KO.Optimizer):
-        raise Exception('`optimizer` must be an instance of `Optimizer`')
-
-    def load_weights(self, file_path):
-        npz_file = np.load(file_path)
-        self.set_weights([npz_file[str(i)] for i in range(len(npz_file.files))])
-
-    def save_weights(self, file_path):
-        weights = self.get_weights()
-        np.savez(file_path, **{str(i): weight for i, weight in enumerate(weights)})
-
-    optimizer.load_weights = lambda file_path : load_weights(optimizer, file_path)
-    optimizer.save_weights = lambda file_path : save_weights(optimizer, file_path)
-    return optimizer
-
-class CacheCallback(KC.Callback):
-    def __init__(self, begin_save, epoch_save, folder):
-        self.begin_save = begin_save
-        self.epoch_save = epoch_save
-        self.folder = folder
-
-    def on_train_begin(self, logs=None):
-        self.begin_save()
-
-    def on_epoch_end(self, epoch, logs=None):
-        self.epoch_save()
-
-    def on_train_end(self, logs=None):
-        remove_folder(self.folder)
 
 class TrainerBase(object):
     def __init__(self, network, network_name, data_file, **kwargs):
@@ -167,11 +138,14 @@ class TrainerBase(object):
     def load_tuples(self, cache, split=0.9):
         if not hasattr(self, 'tuple_container'):
             tuples = json_to_tuples(json_load_tuple(self.trainer_params['data_file']))
-            np.random.shuffle(tuples)
-            split_index = int(split * len(tuples))
-            train_tuple_container = tuples[:split_index]
-            test_tuple_container = tuples[split_index:]
-            self.tuple_container = [train_tuple_container, test_tuple_container]
+            if split < 1.0:
+                np.random.shuffle(tuples)
+                split_index = int(split * len(tuples))
+                train_tuple_container = tuples[:split_index]
+                test_tuple_container = tuples[split_index:]
+                self.tuple_container = [train_tuple_container, test_tuple_container]
+            else:
+                self.tuple_container = [tuples, []]
             if cache:
                 folder = self.get_cache_folder()
                 file_name = 'tuple_container.json'
