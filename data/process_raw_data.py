@@ -1,6 +1,7 @@
 import os
 import numpy as np
 from AlphaGomoku.process_data import process_history
+from AlphaGomoku.process_data import tuples_to_json
 from AlphaGomoku.utils.json_utils import json_dump_tuple
 
 path = os.path.dirname(os.path.realpath(__file__))
@@ -31,7 +32,9 @@ def main(index, max_number=150000):
     np.random.shuffle(indice)
     tuples = [tuples[idx] for idx in indice[:max_number]]
     print('the number of tuples: {}'.format(len(tuples)))
-    json_dump_tuple(tuples, os.path.join(path, 'pre', '{}.json'.format(index)))
+    json_object = tuples_to_json(tuples)
+    json_dump_tuple(json_object,
+                    os.path.join(path, 'pre', '{}.json'.format(index)))
 
 if __name__ == '__main__':
     main(0)

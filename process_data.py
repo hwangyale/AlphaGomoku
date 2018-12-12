@@ -1,3 +1,4 @@
+import queue
 import numpy as np
 from .global_constants import *
 from .board import Board
@@ -81,5 +82,60 @@ def process_history(container, check=True):
             tuples[idx] = tuples[idx] + (value, )
 
         progbar.update()
-        
+
     return tuples
+
+
+class TupleNode(object):
+    def __init__(self):
+        self.data_container = []
+        self.children = {}
+
+    def append(self, data):
+        self.data_container.append(data)
+
+
+def tuples_to_tree(tuples):
+    nodes = [TupleNode()]
+    for tpl in tuples:
+        history, *data = tpl
+        node_index = 0
+        for action in history:
+            node_index = nodes[node_index].children.setdefault(action, len(nodes))
+            if node_index == len(nodes):
+                nodes.append(TupleNode())
+        nodes[node_index].append(data)
+    return nodes
+
+def tree_to_json(nodes):
+    json_object = []
+    for node in nodes:
+        json_object.append((node.data_container, node.children))
+    return json_object
+
+def json_to_tree(json_object):
+    nodes = []
+    for data_container, children in json_object:
+        node = TupleNode()
+        node.data_container = data_container
+        node.children = children
+        nodes.append(node)
+    return nodes
+
+def tree_to_tuples(nodes):
+    tuples = []
+    node_queue = queue.Queue()
+    node_queue.put((nodes[0], []))
+    while not node_queue.empty():
+        node, history = node_queue.get()
+        for data in node.data_container:
+            tuples.append((history[:], )+tuple(data))
+        for action, node_index in node.children.items():
+            node_queue.put((nodes[node_index], history+[action]))
+    return tuples
+
+def tuples_to_json(tuples):
+    return tree_to_json(tuples_to_tree(tuples))
+
+def json_to_tuples(json_object):
+    return tree_to_tuples(json_to_tree(json_object))
