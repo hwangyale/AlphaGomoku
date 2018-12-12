@@ -143,7 +143,6 @@ venv.bak/
 __backup__
 
 # igore pre data
-data/pre
 __raw_data__
 
 # ignore hash table

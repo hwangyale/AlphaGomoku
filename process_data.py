@@ -110,7 +110,7 @@ def tuples_to_tree(tuples):
 def tree_to_json(nodes):
     json_object = []
     for node in nodes:
-        json_object.append((node.data_container, node.children))
+        json_object.append((node.data_container, list(node.children.items())))
     return json_object
 
 def json_to_tree(json_object):
@@ -118,7 +118,7 @@ def json_to_tree(json_object):
     for data_container, children in json_object:
         node = TupleNode()
         node.data_container = data_container
-        node.children = children
+        node.children = dict(children)
         nodes.append(node)
     return nodes
 
