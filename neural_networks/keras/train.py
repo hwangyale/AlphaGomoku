@@ -11,6 +11,7 @@ from ...temp import get_cache_folder, remove_folder
 from .weights import get_config_file, get_weight_file
 from ...utils.board_utils import action_functions, tensor_functions
 from ...process_data import process_history
+from ...process_data import tuples_to_json, json_to_tuples
 
 def optimizer_wrapper(optimizer):
     if not isinstance(optimizer, KO.Optimizer):
@@ -160,11 +161,12 @@ class TrainerBase(object):
         folder = self.get_cache_folder()
         file_name = 'tuple_container.json'
         tuple_container_file = os.path.join(folder, file_name)
-        self.tuple_container = json_load_tuple(tuple_container_file)
+        self.tuple_container = [json_to_tuples(json_object)
+                                for json_object in json_load_tuple(tuple_container_file)]
 
     def load_tuples(self, cache, split=0.9):
         if not hasattr(self, 'tuple_container'):
-            tuples = json_load_tuple(self.trainer_params['data_file'])
+            tuples = json_to_tuples(json_load_tuple(self.trainer_params['data_file']))
             np.random.shuffle(tuples)
             split_index = int(split * len(tuples))
             train_tuple_container = tuples[:split_index]
@@ -174,7 +176,10 @@ class TrainerBase(object):
                 folder = self.get_cache_folder()
                 file_name = 'tuple_container.json'
                 tuple_container_file = os.path.join(folder, file_name)
-                json_dump_tuple(self.tuple_container, tuple_container_file)
+                json_dump_tuple(
+                    [tuples_to_json(tuples) for tuples in self.tuple_container],
+                    tuple_container_file
+                )
 
     def get_trainer_path(self):
         file_name = 'config.json'
