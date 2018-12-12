@@ -144,6 +144,7 @@ __backup__
 
 # igore pre data
 data/pre
+__raw_data__
 
 # ignore hash table
 gomoku_hash_table.txt
