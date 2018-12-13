@@ -1,4 +1,4 @@
-from ...utils.generic_utils import deserialize_object
+from ..utils.generic_utils import deserialize_object
 from .rollout_mcts import *
 from .evaluation_mcts import *
 from .rl_evaluation_mcts import *
