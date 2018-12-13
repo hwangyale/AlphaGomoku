@@ -1,13 +1,13 @@
 from AlphaGomoku.global_constants import *
 from AlphaGomoku.common import *
-from AlphaGomoku.mcts.evaluation_mcts import EvaluationMCTSBase
+from AlphaGomoku.mcts.evaluation_mcts import EvaluationMCTS
 from AlphaGomoku.neural_networks import get_network
 from AlphaGomoku.neural_networks.keras.weights import get_weight_file
 from AlphaGomoku.board import Board
 from AlphaGomoku.utils.visualization_utils import visualize
 
-mixture = get_network('mixture', 'unitized_resnet', 'keras', stack_nb=1)
-mixture.load_weights(get_weight_file('pre', mixture.network.name, 0))
+mixture = get_network('mixture', 'resnet', 'keras', stack_nb=2)
+mixture.load_weights(get_weight_file('pre', mixture.network.name, 1))
 board = Board(toTensor=True, visualization=False)
 
 def visualize_policy():
