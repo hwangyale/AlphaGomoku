@@ -12,7 +12,7 @@ kwargs = {
         'traverse_time': 10, 'c_puct': None,
         'thread_number': 1, 'delete_threshold': 100
     },
-    'self_play_number': 10,
+    'self_play_number': 4,
     'self_play_batch_size': 10,
     'self_play_cache_step': 20,
     'evaluate_mcts_config': {
@@ -23,7 +23,7 @@ kwargs = {
     'evaluate_win_ratio': 0.55,
     'train': {
         'batch_size': 128,
-        'epochs': 4,
+        'epochs': 2,
         'verbose': 1
     }
 }

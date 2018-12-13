@@ -77,7 +77,7 @@ class EvaluationMCTS(MCTSBase):
             threads.append(thread)
         return threads
 
-    def update_nowait(self, tuples, progbar=None):
+    def update_nowait(self, tuples, progbar=None, endline=True):
         left_tuples = []
         for index, board, node in tuples:
             if node.value is not None:
@@ -85,12 +85,12 @@ class EvaluationMCTS(MCTSBase):
                 node.update(-node.value, index,
                             virtual_loss, virtual_visit)
                 if progbar is not None:
-                    progbar.update()
+                    progbar.update(endline=endline)
                 continue
             left_tuples.append((index, board, node))
         return left_tuples
 
-    def expand_and_update(self, tuples, progbar=None):
+    def expand_and_update(self, tuples, progbar=None, endline=True):
         indice = []
         boards = []
         nodes = []
@@ -110,9 +110,9 @@ class EvaluationMCTS(MCTSBase):
             virtual_loss, virtual_visit = self.get_virtual_value_function(index)
             node.update(-values[idx], index, virtual_loss, virtual_visit)
             if progbar is not None:
-                progbar.update()
+                progbar.update(endline=endline)
 
-    def mcts(self, boards, verbose=1, node_cls=Node):
+    def mcts(self, boards, verbose=1, node_cls=Node, verbose_endline=True):
         boards = tolist(boards)
         traverse_time = self.traverse_time
         condition = self.condition
@@ -161,7 +161,7 @@ class EvaluationMCTS(MCTSBase):
             if len(tuples) == 0:
                 condition.release()
                 continue
-            left_tuples = self.update_nowait(tuples, progbar)
+            left_tuples = self.update_nowait(tuples, progbar, verbose_endline)
             total_count += len(tuples) - len(left_tuples)
             if total_count == max_count:
                 condition.notifyAll()
@@ -172,7 +172,7 @@ class EvaluationMCTS(MCTSBase):
                 condition.release()
                 continue
 
-            self.expand_and_update(left_tuples, progbar)
+            self.expand_and_update(left_tuples, progbar, verbose_endline)
             total_count += len(left_tuples)
             condition.notifyAll()
             condition.release()

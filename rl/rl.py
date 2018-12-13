@@ -1,4 +1,5 @@
 import os
+import time
 import numpy as np
 import keras.engine as KE
 from keras.callbacks import LearningRateScheduler
@@ -43,7 +44,7 @@ class SelfPlayBase(object):
         while len(boards) > 0:
             yield self.step, self.finished
             temp_boards = list(boards)
-            actions = tolist(mcts.mcts(temp_boards, verbose=0))
+            actions = tolist(mcts.mcts(temp_boards, verbose=1))
             for board, action in zip(temp_boards, actions):
                 board.move(action)
                 if board.is_over:
@@ -128,7 +129,7 @@ class Evaluator(object):
         while len(boards) > 0:
             yield step, finished, win, loss, draw
             temp_boards = [board for board, ply in boards if ply == player]
-            actions = tolist(mcts[player].mcts(temp_boards, verbose=0))
+            actions = tolist(mcts[player].mcts(temp_boards, verbose=1))
             for board, action in zip(temp_boards, actions):
                 board.move(action)
                 boards.remove((board, player))
@@ -320,11 +321,11 @@ class EvaluationMainLoop(MainLoopBase):
                 sf = EvaluationSelfPlay(mcts, config['self_play_number'],
                                         config['self_play_batch_size'])
                 print('self-play:')
-                progbar = ProgBar(config['self_play_number'])
-                pre_finished = 0
                 self_play_file = self.get_cache_self_play_path()
                 pre_sf_config = None
                 for step, finished in sf.generator():
+                    print('finished: {}/{} step: {}'
+                          .format(finished, config['self_play_number'], step))
                     if step % config['self_play_cache_step'] == 0:
                         sf_config = sf.get_config()
                         json_dump_tuple(sf_config, self_play_file)
@@ -334,8 +335,6 @@ class EvaluationMainLoop(MainLoopBase):
                         if self.state == 0:
                             self.state = 1
                             self.cache()
-                    progbar.update(finished-pre_finished, 'step: {}'.format(step))
-                    pre_finished = finished
                 raw_samples = sf.get_raw_samples()
                 json_dump_tuple(tuples_to_json(raw_samples), self.get_cache_self_play_sample_path())
                 self.state = 2
@@ -348,24 +347,21 @@ class EvaluationMainLoop(MainLoopBase):
                 sf_config = json_load_tuple(self_play_file)
                 sf = EvaluationSelfPlay.from_config(sf_config)
                 print('self-play:')
-                progbar = ProgBar(config['self_play_number'])
                 generator = sf.generator()
                 try:
                     step, finished = next(generator)
-                    progbar.update(finished, 'step: {}'.format(step))
-                    pre_finished = finished
                 except:
                     pass
                 pre_sf_config = None
                 for step, finished in sf.generator():
+                    print('finished: {}/{} step: {}'
+                          .format(finished, config['self_play_number'], step))
                     if step % config['self_play_cache_step'] == 0:
                         sf_config = sf.get_config()
                         json_dump_tuple(sf_config, self_play_file)
                         if pre_sf_config is not None:
                             EvaluationSelfPlay.from_config(pre_sf_config)
                         pre_sf_config = sf_config
-                    progbar.update(finished-pre_finished, 'step: {}'.format(step))
-                    pre_finished = finished
                 raw_samples = sf.get_raw_samples()
                 json_dump_tuple(tuples_to_json(raw_samples), self.get_cache_self_play_sample_path())
                 self.state = 2
@@ -405,16 +401,13 @@ class EvaluationMainLoop(MainLoopBase):
                                       evaluate_number)
                 print('evaluation:')
                 number = 2 * evaluate_number
-                progbar = ProgBar(number)
-                pre_finished = 0
                 for step, finished, win, loss, draw in evaluator.generator():
-                    progbar.update(finished-pre_finished, 'step: {} win: {} loss: {} draw: {}'
-                                   .format(step, win, loss, draw))
+                    print('finished: {}/{} step: {} win: {} loss: {} draw: {}'
+                          .format(finished, number, step, win, loss, draw))
                     if win / float(number) >= config['evaluate_win_ratio']:
                         break
                     if (loss + draw) / float(number) > 1 - config['evaluate_win_ratio']:
                         break
-                    pre_finished = finished
                 print('\n')
                 if win / float(number) >= config['evaluate_win_ratio']:
                     self.best_network = self.copy_network(self.current_network)

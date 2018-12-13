@@ -15,7 +15,7 @@ class ProgBar(object):
         sys.stdout.flush()
         self.start = time.time()
 
-    def update(self, step=1, show=''):
+    def update(self, step=1, show='', endline=True):
         print('\r' + ' ' * (79) + '\r', end='')
         self.step += step
         percent = self.step / float(self.steps)
@@ -40,7 +40,11 @@ class ProgBar(object):
         else:
             total_time = time.time() - self.start
             time_per_step = (total_time / self.steps) * 1000
-            print(' {:.0f}s {:.0f}ms/step'.format(total_time, time_per_step))
+            if endline:
+                end = '\n'
+            else:
+                end = ''
+            print(' {:.0f}s {:.0f}ms/step'.format(total_time, time_per_step), end=end)
 
 
 def serialize_object(instance, *args, **kwargs):

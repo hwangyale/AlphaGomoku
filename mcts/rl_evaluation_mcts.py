@@ -82,8 +82,8 @@ class RLEvaluationMCTS(EvaluationMCTS):
         super(RLEvaluationMCTS, self).__init__(*args, **kwargs)
         self.visit_containers = []
 
-    def mcts(self, board, verbose=1):
-        return super(RLEvaluationMCTS, self).mcts(board, verbose, RLNode)
+    def mcts(self, board, verbose=1, verbose_endline=True):
+        return super(RLEvaluationMCTS, self).mcts(board, verbose, RLNode, verbose_endline)
 
     def get_visit_container(self, board):
         index = self.get_board_index(board)
