@@ -5,9 +5,9 @@ from ..global_constants import *
 from ..common import *
 from ..board import Board
 from ..mcts import get as mcts_get
+from ..mcts import EvaluationMCTS, RLEvaluationMCTS
 from ..neural_networks.keras import get as network_get
 from ..neural_networks.keras.train import TrainerBase
-from ..neural_networks.weights import get_config_file, get_weight_file
 from ..utils.generic_utils import ProgBar
 from ..utils.json_utils import json_dump_tuple, json_load_tuple
 from ..utils.board_utils import tensor_functions
@@ -63,14 +63,14 @@ class SelfPlayBase(object):
         return self.raw_samples
 
     def get_config(self):
-        config = [
+        config = {
             'mcts': serialize_object(self.mcts),
             'number': self.number,
             'batch_size': self.batch_size,
             'index': self.index,
             'step': self.step,
             'finished': self.finished
-        ]
+        }
         if hasattr(self, 'raw_samples'):
             config['raw_samples'] = tuples_to_json(self.raw_samples)
         return config
@@ -126,7 +126,7 @@ class Evaluator(object):
             yield step, finished, win, loss, draw
             temp_boards = [board for board, ply in boards if ply == player]
             actions = tolist(mcts[player].mcts(temp_boards))
-            for board, action in zip(temp_boards, actions)
+            for board, action in zip(temp_boards, actions):
                 board.move(action)
                 boards.remove((board, player))
                 if board.is_over:
@@ -284,8 +284,8 @@ class MainLoopBase(object):
     def get_config(self):
         config = {
             'config': self.config,
-            'best_network': deserialize_object(self.best_network, True),
-            'current_network': deserialize_object(self.current_network, True),
+            'best_network': serialize_object(self.best_network, True),
+            'current_network': serialize_object(self.current_network, True),
             'state': self.state,
             'self_play_index': self.self_play_index
         }
@@ -320,8 +320,8 @@ class EvaluationMainLoop(MainLoopBase):
                 self_play_file = self.get_cache_self_play_path()
                 for step, finished in sf.generator():
                     if step % config['self_play_cache_step'] == 0:
-                        config = sf.get_config()
-                        json_dump_tuple(config, self_play_file)
+                        sf_config = sf.get_config()
+                        json_dump_tuple(sf_config, self_play_file)
                         self.state = 1
                         self.cache()
                     progbar.update(finished-pre_finished, 'step: {}'.format(step))
@@ -333,8 +333,8 @@ class EvaluationMainLoop(MainLoopBase):
 
             elif self.state == 1:
                 self_play_file = self.get_cache_self_play_path()
-                config = json_load_tuple(self_play_file)
-                sf = EvaluationSelfPlay.from_config(config)
+                sf_config = json_load_tuple(self_play_file)
+                sf = EvaluationSelfPlay.from_config(sf_config)
                 print('self-play:')
                 progbar = ProgBar(config['self_play_number'])
                 generator = sf.generator()
@@ -346,8 +346,8 @@ class EvaluationMainLoop(MainLoopBase):
                     pass
                 for step, finished in sf.generator():
                     if step % config['self_play_cache_step'] == 0:
-                        config = sf.get_config()
-                        json_dump_tuple(config, self_play_file)
+                        sf_config = sf.get_config()
+                        json_dump_tuple(sf_config, self_play_file)
                     progbar.update(finished-pre_finished, 'step: {}'.format(step))
                     pre_finished = finished
                 raw_samples = sf.get_raw_samples()

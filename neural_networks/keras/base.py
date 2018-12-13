@@ -11,7 +11,7 @@ from ...utils.board_utils import recover_action_functions
 from ...utils.board_utils import recover_tensor_functions
 from ...utils.json_utils import json_load_tuple, json_dump_tuple
 from .weights import get_weight_file
-from ...temp import get_temp_weight_file
+from ...temp import get_temp_weight_file, remove_temp_weight_file
 
 
 rng = np.random

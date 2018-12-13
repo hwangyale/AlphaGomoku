@@ -6,17 +6,17 @@ from ..common import *
 from ..board import Board
 from ..utils.thread_utils import CONDITION
 from ..utils.zobrist_utils import get_zobrist_key
-from ..utils.generic_utils import ProgBar, deserialize_object
+from ..utils.generic_utils import ProgBar, serialize_object
 from .base import MCTSBoard, Node, MCTSBase
 from ..neural_networks.keras import get as network_get
 
 class EvaluationTraversal(threading.Thread):
     def __init__(self, traversalQueue, updateQueue,
-                 root, get_virtual_value_function,
+                 roots, get_virtual_value_function,
                  c_puct=None, condition=None, start=True, **kwargs):
         self.traversalQueue = traversalQueue
         self.updateQueue = updateQueue
-        self.root = root
+        self.roots = roots
         self.get_virtual_value_function = get_virtual_value_function
         self.c_puct = MCTS_C_PUCT if c_puct is None else c_puct
         self.condition = CONDITION if condition is None else condition
@@ -28,7 +28,7 @@ class EvaluationTraversal(threading.Thread):
     def run(self):
         traversalQueue = self.traversalQueue
         updateQueue = self.updateQueue
-        root = self.root
+        roots = self.roots
         get_virtual_value_function = self.get_virtual_value_function
         c_puct = self.c_puct
         condition = self.condition
@@ -42,7 +42,10 @@ class EvaluationTraversal(threading.Thread):
             virtual_loss, virtual_visit = get_virtual_value_function(thread_index)
             condition.release()
 
-            node = root
+            condition.acquire()
+            node = roots[board]
+            board = MCTSBoard(board, True)
+            condition.release()
             while True:
                 condition.acquire()
                 if not node.expanded:
@@ -60,16 +63,16 @@ class EvaluationMCTS(MCTSBase):
         self.mixture_network = mixture_network
         super(EvaluationMCTS, self).__init__(*args, **kwargs)
 
-    def traverse(self, board, root, traversalQueue,
+    def traverse(self, board, roots, traversalQueue,
                  updateQueue, start=True):
         condition = self.condition
 
         for index in range(self.traverse_time):
-            traversalQueue.put_nowait((index, board.copy()))
+            traversalQueue.put_nowait((index, board))
 
         threads = []
         for _ in range(self.thread_number):
-            thread = EvaluationTraversal(traversalQueue, updateQueue, root,
+            thread = EvaluationTraversal(traversalQueue, updateQueue, roots,
                                          self.get_virtual_value_function, self.c_puct,
                                          self.condition, start)
             threads.append(thread)
@@ -149,7 +152,7 @@ class EvaluationMCTS(MCTSBase):
         updateQueue = queue.Queue()
         threads = []
         for board in traverse_boards:
-            threads += self.traverse(MCTSBoard(board, True), roots[board], traversalQueue,
+            threads += self.traverse(board, roots, traversalQueue,
                                      updateQueue, False)
         for thread in threads:
             thread.start()
@@ -182,7 +185,7 @@ class EvaluationMCTS(MCTSBase):
         for board in traverse_boards:
             node_pool = self.get_node_pool(board)
             left_pool = self.get_left_pool(board)
-            actions[board] = self.process_root(board, root)
+            actions[board] = self.process_root(board, roots[board])
             pairs = [(key, node_pool[key]) for key in left_pool]
             left_pool.clear()
             node_pool.clear()
@@ -213,7 +216,8 @@ class EvaluationMCTS(MCTSBase):
 
     def get_config(self):
         config = super(EvaluationMCTS, self).get_config()
-        config['mixture_network'] = deserialize_object(self.mixture_network, True)
+        config['mixture_network'] = serialize_object(self.mixture_network, True)
+        return config
 
     @classmethod
     def from_config(cls, config, *args, **kwargs):
