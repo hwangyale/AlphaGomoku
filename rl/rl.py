@@ -1,5 +1,6 @@
 import os
 import numpy as np
+from keras.callbacks import LearningRateScheduler
 from ..global_constants import *
 from ..common import *
 from ..board import Board
@@ -59,9 +60,6 @@ class SelfPlayBase(object):
             raise Exception('Self-play has not been finished')
         return self.raw_samples
 
-    def process_raw_samples(self, raw_samples):
-        raise NotImplementedError('`process_raw_samples` has not been implemented')
-
     def get_config(self):
         config = [
             'mcts': {
@@ -86,7 +84,7 @@ class SelfPlayBase(object):
         sf.__dict__.update(config)
         sf.boards = set(board for board in boards if not board.is_over)
         if raw_samples is not None:
-            sf.raw_samples = raw_samples
+            sf.raw_samples = json_to_tuples(raw_samples)
         return sf
 
 
@@ -96,7 +94,7 @@ class EvaluationSelfPlay(SelfPlayBase):
         player_dict = {0: BLACK, 1: WHITE}
         for board, index in mcts.board_indice.items():
             winner = board.winner
-            for history, visits in mcts.visit_container:
+            for history, visits in mcts.visit_containers[index]:
                 player = player_dict[len(history) % 2]
                 if winner == DRAW:
                     value = MCTS_DRAW_VALUE
@@ -134,7 +132,7 @@ class Evaluator(object):
         boards = set()
         for ply in [0, 1]:
             for _ in range(self.boards_each_side):
-                boards.add((board, ply))
+                boards.add((board(), ply))
         step = 0
         finished = 0
         player = 0
@@ -164,6 +162,9 @@ class Evaluator(object):
 
 
 class RLTrainerBase(TrainerBase):
+    def process_raw_samples(self, raw_samples):
+        raise NotImplementedError('`process_raw_samples` has not been implemented')
+
     def get_tensor_from_visits(self, visits, get_max):
         tensor = np.zeros((BOARD_SIZE, BOARD_SIZE), dtype=FLOATX)
         if get_max:
@@ -248,15 +249,22 @@ class MainLoopBase(object):
             'self_play_number': 1000,
             'self_play_batch_size': 20,
             'self_play_cache_step': 10,
+            'evaluate_mcts_config': {
+                'traverse_time': 500, 'c_puct': None,
+                'thread_number': 1, 'delete_threshold': 10
+            },
             'evaluate_number': 100,
-            'win_ratio': 0.55,
-            'train_batch_size': 128,
-            'train_epochs': 100
+            'evaluate_win_ratio': 0.55,
+            'train': {
+                'batch_size': 128,
+                'epochs': 100,
+                'verbose': 1
+            }
         }
         defaults.update(kwargs)
         self.config = defaults
         self.state = 0
-        self.index = 0
+        self.self_play_index = 0
 
     def run(self):
         raise NotImplementedError('`run` has not been implemented')
@@ -265,10 +273,12 @@ class MainLoopBase(object):
         folder = self.get_cache_folder()
         while True:
             weight_file = os.path.join(folder, '{}.npz'.format(rng.randint(2**32)))
-            if os.path.exists(weight_file):
-                continue
-        config = network.get_config()
-        copy_network = KE.Model.from_config(config)
+            if not os.path.exists(weight_file):
+                break
+        copy_network = network_get({
+            'class_name': network.__class__.__name__,
+            'config': network.get_config()
+        })
         network.save_weights(weight_file)
         copy_network.load_weights(weight_file)
         os.remove(weight_file)
@@ -279,21 +289,36 @@ class MainLoopBase(object):
 
     def get_cache_self_play_path(self):
         folder = self.get_cache_folder()
-        return os.path.join(folder, 'self_play.json')
+        return os.path.join(folder, 'self_play_{}.json'.format(self.self_play_index))
 
+    def get_cache_self_play_sample_path(self):
+        folder = self.get_cache_folder()
+        return os.path.join(folder, 'raw_samples_{}.json'.format(self.self_play_index))
+
+    def cache(self):
+        # TODO:
+        pass
+
+def scheduler(epoch):
+    if epoch <= 60:
+        return 0.05
+    if epoch <= 120:
+        return 0.01
+    if epoch <= 160:
+        return 0.002
+    return 0.0004
 
 class EvaluationMainLoop(MainLoopBase):
     def run(self, load_cache):
         if load_cache:
             pass
         else:
-            state = self.state
-            best_network = self.network
+            self.best_network = self.network
+            self.current_network = self.copy_network(best_network)
             config = self.config
-            index = self.index
-        self_play_file = self.get_cache_self_play_path()
         while True:
-            if state == 0:
+            if self.state == 0:
+                self.self_play_index += 1
                 mcts = RLEvaluationMCTS(self.copy_network(self.best_network),
                                         **config['self_play_mcts_config'])
                 sf = EvaluationSelfPlay(mcts, config['self_play_number'],
@@ -301,13 +326,86 @@ class EvaluationMainLoop(MainLoopBase):
                 print('self-play:')
                 progbar = ProgBar(config['self_play_number'])
                 pre_finished = 0
+                self_play_file = self.get_cache_self_play_path()
                 for step, finished in sf.generator():
                     if step % config['self_play_cache_step'] == 0:
-                        config = sf.get_config(index)
+                        config = sf.get_config(self.self_play_index)
                         json_dump_tuple(config, self_play_file)
-                        state = 1
+                        self.state = 1
+                        self.cache()
                     progbar.update(finished-pre_finished, 'step: {}'.format(step))
                     pre_finished = finished
+                raw_samples = sf.get_raw_samples()
+                json_dump_tuple(raw_samples, self.get_cache_self_play_sample_path())
+                self.state = 2
+                self.cache()
+
+            elif self.state == 1:
+                self_play_file = self.get_cache_self_play_path()
+                config = json_load_tuple(self_play_file)
+                sf = EvaluationSelfPlay.from_config(config)
+                print('self-play:')
+                progbar = ProgBar(config['self_play_number'])
+                generator = sf.generator()
+                try:
+                    step, finished = next(generator)
+                    progbar.update(finished, 'step: {}'.format(step))
+                    pre_finished = finished
+                except:
+                    pass
+                for step, finished in sf.generator():
+                    if step % config['self_play_cache_step'] == 0:
+                        config = sf.get_config(self.self_play_index)
+                        json_dump_tuple(config, self_play_file)
+                    progbar.update(finished-pre_finished, 'step: {}'.format(step))
+                    pre_finished = finished
+                raw_samples = sf.get_raw_samples()
+                json_dump_tuple(raw_samples, self.get_cache_self_play_sample_path())
+                self.state = 2
+                self.cache()
+
+            elif self.state == 2:
+                trainer = EvaluationTrainer(self.current_network.network,
+                                            self.current_network.network.name,
+                                            self.get_cache_self_play_sample_path(),
+                                            **config['train'])
+                self.state = 3
+                self.cache()
+                callbacks = [LearningRateScheduler(scheduler)]
+                trainer.train(True, 1.0, callbacks=callbacks)
+                self.state = 4
+                self.cache()
+
+            elif self.state == 3:
+                trainer = EvaluationTrainer.from_cache(self.current_network.network.name)
+                callbacks = [LearningRateScheduler(scheduler)]
+                trainer.train(True, 1.0, callbacks=callbacks)
+                self.state = 4
+                self.cache()
+
+            else:
+                evaluate_number = config['evaluate_number']
+                evaluator = Evaluator(EvaluationMCTS(self.best_network, **config['evaluate_mcts_config']),
+                                      EvaluationMCTS(self.current_network, **config['evaluate_mcts_config']),
+                                      evaluate_number)
+                print('evaluation:')
+                number = 2 * evaluate_number
+                progbar = ProgBar(number)
+                pre_finished = 0
+                for step, finished, win, loss, draw in evaluator.generator():
+                    progbar(finished-pre_finished, 'win: {} loss: {} draw: {}'
+                            .format(win, loss, draw))
+                    if win / float(number) >= config['evaluate_win_ratio']:
+                        break
+                    if (loss + draw) / float(number) > 1 - config['evaluate_win_ratio']:
+                        break
+                    pre_finished = finished
+                if win / float(number) >= config['evaluate_win_ratio']:
+                    self.best_network = self.copy_network(self.current_network)
+                    self.state = 0
+                else:
+                    self.state = 2
+                self.cache()
 
 
     def get_cache_folder(self):
