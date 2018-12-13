@@ -28,7 +28,10 @@ class ProgBar(object):
         elif self.step < self.steps:
             print('>', end='')
         print('|', end='')
-        left_time = (time.time() - self.start) * (self.steps - self.step) / (float(self.step) + 1e-10)
+        if self.step > 0:
+            left_time = (time.time() - self.start) * (self.steps - self.step) / (float(self.step))
+        else:
+            left_time = float('inf')
         if self.step < self.steps:
             print(' ETA: {:.0f}s'.format(left_time), end='')
             if show != '':

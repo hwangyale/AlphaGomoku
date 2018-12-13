@@ -10,26 +10,25 @@ mixture.load_weights(get_weight_file('pre', mixture.network.name, 0))
 kwargs = {
     'self_play_mcts_config': {
         'traverse_time': 10, 'c_puct': None,
-        'thread_number': 1, 'delete_threshold': 10
+        'thread_number': 1, 'delete_threshold': 100
     },
     'self_play_number': 10,
     'self_play_batch_size': 10,
-    'self_play_cache_step': 10,
+    'self_play_cache_step': 20,
     'evaluate_mcts_config': {
         'traverse_time': 10, 'c_puct': None,
-        'thread_number': 1, 'delete_threshold': 10
+        'thread_number': 1, 'delete_threshold': 100
     },
     'evaluate_number': 5,
     'evaluate_win_ratio': 0.55,
     'train': {
         'batch_size': 128,
-        'epochs': 1,
+        'epochs': 4,
         'verbose': 1
     }
 }
 mainLoop = EvaluationMainLoop(mixture, **kwargs)
-if False:
-# if {'y': True, 'n': False}[input('from cache[y/n]: ')]:
+if {'y': True, 'n': False}[input('from cache[y/n]: ')]:
     mainLoop.run(True)
 else:
     mainLoop.run(False)

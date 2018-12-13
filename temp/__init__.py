@@ -1,5 +1,6 @@
 __all__ = ['get_cache_folder', 'get_file_path',
-           'remove_folder', 'get_temp_weight_file']
+           'remove_folder', 'get_temp_weight_file',
+           'clear_temp_weight_files']
 import os
 import numpy as np
 
@@ -13,7 +14,7 @@ def get_cache_folder(folder_name):
 def get_path(folder_path, file_name):
     return os.path.join(folder_path, file_name)
 
-def remove_folder(folder_path):
+def remove_folder(folder_path, include_folder=True):
     if not os.path.exists(folder_path):
         return
     for root, dirs, files in os.walk(folder_path):
@@ -22,7 +23,8 @@ def remove_folder(folder_path):
     for root, dirs, files in os.walk(folder_path, False, lambda x: x):
         for dir in dirs:
             os.rmdir(os.path.join(root, dir))
-    os.rmdir(root)
+    if include_folder:
+        os.rmdir(root)
 
 def get_temp_weight_file(weight_index=None):
     folder = get_cache_folder('temp_weights')
@@ -40,3 +42,7 @@ def get_temp_weight_file(weight_index=None):
 def remove_temp_weight_file(weight_index):
     weight_file = get_temp_weight_file(weight_index)
     os.remove(weight_file)
+
+def clear_temp_weight_files():
+    folder = get_cache_folder('temp_weights')
+    remove_folder(folder, False)

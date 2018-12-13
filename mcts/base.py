@@ -101,8 +101,12 @@ class MCTSBoard(Board):
                                       MCTS_DEFEND_VCT_TIME)]
         if len(actions) > 0:
             return actions, None
-        else:
+        elif len(bounded_actions) > 0:
             return bounded_actions, None
+        elif len(legal_actions):
+            return legal_actions, None
+        else:
+            raise Exception('non of legal actions')
 
     def check_bound(self, action):
         row, col = action
@@ -189,6 +193,9 @@ class Node(object):
         zobristKey = self.zobristKey
         if zobristKey not in self.tuple_table:
             actions = self.action_table[zobristKey]
+            if len(actions) == 0:
+                print(board)
+                raise Exception('non of actions to expand')
             probs = [distribution[flatten(action)] for action in actions]
             s = sum(probs)
             if s <= 0.0:
@@ -346,18 +353,18 @@ class MCTSBase(object):
         config = {
             'traverse_time': self.traverse_time,
             'c_puct': self.c_puct,
-            'thread_time': self.thread_number,
+            'thread_number': self.thread_number,
             'delete_threshold': self.delete_threshold,
             'condition': None
         }
 
         config['board_indice'] = [(board.get_config(), idx)
                                   for board, idx in self.board_indice.items()]
-        config['node_pools'] = [{key: node.get_config() for key, node in npl.items()}
+        config['node_pools'] = [[(key, node.get_config()) for key, node in npl.items()]
                                 for npl in self.node_pools]
-        config['tuple_table'] = {key: tpl for key, tpl in self.tuple_table.items()}
-        config['action_table'] = {key: action for key, action in self.action_table.items()}
-        config['value_table'] = {key: value for key, value in self.value_table.items()}
+        config['tuple_table'] = list(self.tuple_table.items())
+        config['action_table'] = list(self.action_table.items())
+        config['value_table'] = list(self.value_table.items())
 
         return config
 
@@ -388,8 +395,8 @@ class MCTSBase(object):
                                  tuple_table, action_table, value_table)
             boards.append(board)
 
-        tuple_table.update(config['tuple_table'])
-        action_table.update(config['action_table'])
-        value_table.update(config['value_table'])
+        tuple_table.update(dict(config['tuple_table']))
+        action_table.update(dict(config['action_table']))
+        value_table.update(dict(config['value_table']))
 
         return tree, boards

@@ -82,28 +82,6 @@ class RLEvaluationMCTS(EvaluationMCTS):
         super(RLEvaluationMCTS, self).__init__(*args, **kwargs)
         self.visit_containers = []
 
-    # def expand_and_update(self, tuples, progbar=None):
-    #     indice = []
-    #     boards = []
-    #     nodes = []
-    #     for index, board, node in tuples:
-    #         indice.append(index)
-    #         boards.append(board)
-    #         nodes.append(node)
-    #     distributions, values = \
-    #         self.mixture_network.predict_pairs(boards, sample=False, transform=True)
-    #     distributions = tolist(distributions)
-    #     values = tolist(values)
-    #
-    #     for idx, node in enumerate(nodes):
-    #         if not node.expanded:
-    #             node.develop(boards[idx], distributions[idx])
-    #         index = indice[idx]
-    #         virtual_loss, virtual_visit = self.get_virtual_value_function(index)
-    #         node.update(-values[idx], index, virtual_loss, virtual_visit)
-    #         if progbar is not None:
-    #             progbar.update()
-
     def mcts(self, board, verbose=1):
         return super(RLEvaluationMCTS, self).mcts(board, verbose, RLNode)
 
