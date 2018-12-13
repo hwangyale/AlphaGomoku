@@ -1,6 +1,8 @@
+import numpy as np
 import keras.optimizers as KO
 import keras.callbacks as KC
 import keras.engine as KE
+from ..temp import remove_folder
 
 
 def optimizer_wrapper(optimizer):
