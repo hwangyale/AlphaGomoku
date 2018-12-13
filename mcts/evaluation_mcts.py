@@ -95,7 +95,8 @@ class EvaluationMCTS(MCTSBase):
             indice.append(index)
             boards.append(board)
             nodes.append(node)
-        distributions, values = self.mixture_network.predict_pairs(boards, sample=False)
+        distributions, values = \
+            self.mixture_network.predict_pairs(boards, sample=False, transform=True)
         distributions = tolist(distributions)
         values = tolist(values)
 
