@@ -1,5 +1,7 @@
-__all__ = ['get_cache_folder', 'get_file_path', 'remove_folder']
+__all__ = ['get_cache_folder', 'get_file_path',
+           'remove_folder', 'get_temp_weight_file']
 import os
+import numpy as np
 
 path = os.path.dirname(os.path.realpath(__file__))
 def get_cache_folder(folder_name):
@@ -21,3 +23,20 @@ def remove_folder(folder_path):
         for dir in dirs:
             os.rmdir(os.path.join(root, dir))
     os.rmdir(root)
+
+def get_temp_weight_file(weight_index=None):
+    folder = get_cache_folder('temp_weights')
+    if weight_index is None:
+        while True:
+            weight_index = np.random.randint(2**31)
+            weight_file = os.path.join(folder, '{}.npz'.format(weight_index))
+            if not os.path.exists(weight_file):
+                return weight_index, weight_file
+    weight_file = os.path.join(folder, '{}.npz'.format(weight_index))
+    if not os.path.exists(weight_file):
+        raise Exception('Not found weight file: {}'.format(weight_file))
+    return weight_file
+
+def remove_temp_weight_file(weight_index):
+    weight_file = get_temp_weight_file(weight_index)
+    os.remove(weight_file)

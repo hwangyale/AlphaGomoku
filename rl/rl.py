@@ -12,7 +12,9 @@ from ..utils.generic_utils import ProgBar
 from ..utils.json_utils import json_dump_tuple, json_load_tuple
 from ..utils.board_utils import tensor_functions
 from ..utils.keras_utils import optimizer_wrapper, CacheCallback
+from ..utils.generic_utils import serialize_object
 from ..temp import get_cache_folder, remove_folder
+from ..temp import get_temp_weight_file, remove_temp_weight_file
 
 
 rng = np.random
@@ -62,10 +64,7 @@ class SelfPlayBase(object):
 
     def get_config(self):
         config = [
-            'mcts': {
-                'class_name': self.mcts.__class__.__name__,
-                'config': self.mcts.get_config()
-            },
+            'mcts': serialize_object(self.mcts),
             'number': self.number,
             'batch_size': self.batch_size,
             'index': self.index,
@@ -104,22 +103,6 @@ class EvaluationSelfPlay(SelfPlayBase):
                     value = MCTS_LOSS_VALUE
                 tuples.append((history, visits, value))
         return tuples
-
-    def get_config(self, index):
-        config = super(EvaluationSelfPlay, self).get_config()
-        mixture = self.mcts.mixture
-        config['mixture'] = {
-            'class_name': mixture.__class__.__name__,
-            'config': mixture.get_config(True, 'rl', index)
-        }
-        return config
-
-    @classmethod
-    def from_config(cls, config):
-        mixture = network_get(config.pop('mixture'))
-        sf = super(EvaluationSelfPlay, cls).from_config(config)
-        sf.mcts.mixture = mixture
-        return sf
 
 
 class Evaluator(object):
@@ -239,8 +222,10 @@ class EvaluationTrainer(RLTrainerBase):
 
 
 class MainLoopBase(object):
-    def __init__(self, network, **kwargs):
-        self.network = network
+    def __init__(self, network=None, **kwargs):
+        if network is not None:
+            self.best_network = self.copy_network(network)
+            self.current_network = self.copy_network(network)
         defaults = {
             'self_play_mcts_config': {
                 'traverse_time': 500, 'c_puct': None,
@@ -270,18 +255,7 @@ class MainLoopBase(object):
         raise NotImplementedError('`run` has not been implemented')
 
     def copy_network(self, network):
-        folder = self.get_cache_folder()
-        while True:
-            weight_file = os.path.join(folder, '{}.npz'.format(rng.randint(2**32)))
-            if not os.path.exists(weight_file):
-                break
-        copy_network = network_get({
-            'class_name': network.__class__.__name__,
-            'config': network.get_config()
-        })
-        network.save_weights(weight_file)
-        copy_network.load_weights(weight_file)
-        os.remove(weight_file)
+        copy_network = network_get(serialize_object(network, True))
         return copy_network
 
     def get_cache_folder(self):
@@ -296,8 +270,27 @@ class MainLoopBase(object):
         return os.path.join(folder, 'raw_samples_{}.json'.format(self.self_play_index))
 
     def cache(self):
-        # TODO:
-        pass
+        folder = self.get_cache_folder()
+        config = self.get_config()
+        json_dump_tuple(config, os.path.join(folder, 'main_loop_config.json'))
+
+    def load_cache(self):
+        folder = self.get_cache_folder()
+        config = json_load_tuple(os.path.join(folder, 'main_loop_config.json'))
+        self.best_network = network_get(config.pop('best_network'))
+        self.current_network = network_get(config.pop('current_network'))
+        self.__dict__.update(config)
+
+    def get_config(self):
+        config = {
+            'config': self.config,
+            'best_network': deserialize_object(self.best_network, True),
+            'current_network': deserialize_object(self.current_network, True),
+            'state': self.state,
+            'self_play_index': self.self_play_index
+        }
+        return config
+
 
 def scheduler(epoch):
     if epoch <= 60:
@@ -308,14 +301,12 @@ def scheduler(epoch):
         return 0.002
     return 0.0004
 
+
 class EvaluationMainLoop(MainLoopBase):
     def run(self, load_cache):
         if load_cache:
-            pass
-        else:
-            self.best_network = self.network
-            self.current_network = self.copy_network(best_network)
-            config = self.config
+            self.load_cache()
+        config = self.config
         while True:
             if self.state == 0:
                 self.self_play_index += 1
@@ -329,7 +320,7 @@ class EvaluationMainLoop(MainLoopBase):
                 self_play_file = self.get_cache_self_play_path()
                 for step, finished in sf.generator():
                     if step % config['self_play_cache_step'] == 0:
-                        config = sf.get_config(self.self_play_index)
+                        config = sf.get_config()
                         json_dump_tuple(config, self_play_file)
                         self.state = 1
                         self.cache()
@@ -355,7 +346,7 @@ class EvaluationMainLoop(MainLoopBase):
                     pass
                 for step, finished in sf.generator():
                     if step % config['self_play_cache_step'] == 0:
-                        config = sf.get_config(self.self_play_index)
+                        config = sf.get_config()
                         json_dump_tuple(config, self_play_file)
                     progbar.update(finished-pre_finished, 'step: {}'.format(step))
                     pre_finished = finished
@@ -406,7 +397,6 @@ class EvaluationMainLoop(MainLoopBase):
                 else:
                     self.state = 2
                 self.cache()
-
 
     def get_cache_folder(self):
         return get_cache_folder('rl_mixture')

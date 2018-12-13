@@ -148,15 +148,15 @@ class RLEvaluationMCTS(EvaluationMCTS):
 
     def get_config(self):
         config = super(RLEvaluationMCTS, self).get_config()
-        config['visit_container'] = [tuples_to_json(visits)
-                                     for visits in self.visit_container]
+        config['visit_containers'] = [tuples_to_json(visits)
+                                      for visits in self.visit_containers]
         return config
 
     @classmethod
     def from_config(cls, config, *args, **kwargs):
-        visit_container = config.pop('visit_container')
+        visit_containers = config.pop('visit_containers')
         kwargs['node_cls'] = RLNode
-        mcts = super(RLEvaluationMCTS, cls).from_config(config, *args, **kwargs)
-        mcts.visit_container = [json_to_tuples(visits)
-                                for visits in visit_container]
-        return mcts
+        tree, boards = super(RLEvaluationMCTS, cls).from_config(config, *args, **kwargs)
+        tree.visit_containers = [json_to_tuples(visits)
+                                 for visits in visit_containers]
+        return tree, boards

@@ -6,8 +6,9 @@ from ..common import *
 from ..board import Board
 from ..utils.thread_utils import CONDITION
 from ..utils.zobrist_utils import get_zobrist_key
-from ..utils.generic_utils import ProgBar
+from ..utils.generic_utils import ProgBar, deserialize_object
 from .base import MCTSBoard, Node, MCTSBase
+from ..neural_networks.keras import get as network_get
 
 class EvaluationTraversal(threading.Thread):
     def __init__(self, traversalQueue, updateQueue,
@@ -210,6 +211,13 @@ class EvaluationMCTS(MCTSBase):
     def get_virtual_value_function(self, index):
         return MCTS_VIRTUAL_LOSS, MCTS_VIRTUAL_VISIT
 
+    def get_config(self):
+        config = super(EvaluationMCTS, self).get_config()
+        config['mixture_network'] = deserialize_object(self.mixture_network, True)
+
     @classmethod
-    def from_config(cls, *args, **kwargs):
-        return super(EvaluationMCTS, cls).from_config(*args, **kwargs)
+    def from_config(cls, config, *args, **kwargs):
+        mixture_network = network_get(config.pop('mixture_network'))
+        tree, boards = super(EvaluationMCTS, cls).from_config(*args, **kwargs)
+        tree.mixture_network = mixture_network
+        return tree, boards
