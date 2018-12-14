@@ -21,7 +21,7 @@ class Board(CPPBoard):
 
         self.legal_actions = 2**(BOARD_SIZE**2)
         legality = self.check_legality(history)
-        if not all(legality):
+        if not all(tolist(legality)):
             raise Exception('illegal actions: {}'.format(
                             [history[i] for i, lg in enumerate(legality) if not lg]))
 
