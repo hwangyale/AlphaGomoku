@@ -53,11 +53,11 @@ def serialize_object(instance, *args, **kwargs):
         'config': instance.get_config(*args, **kwargs)
     }
 
-def deserialize_object(config, module_objects):
+def deserialize_object(config, module_objects, *args, **kwargs):
     class_name = config['class_name']
     if class_name not in module_objects:
         raise ValueError('Unknown class name: {}'.format(class_name))
-    return module_objects[class_name].from_config(config['config'])
+    return module_objects[class_name].from_config(config['config'], *args, **kwargs)
 
 if __name__ == '__main__':
     import numpy as np

@@ -106,14 +106,15 @@ class Base(object):
         return config
 
     @classmethod
-    def from_config(cls, config):
+    def from_config(cls, config, remove_weights=True):
         network_config = config.pop('network_config')
         network = KE.Model.from_config(network_config)
         weight_index = config.pop('weight_index', None)
         object = cls(network=network, **config)
         if weight_index is not None:
             object.load_weights(get_temp_weight_file(weight_index))
-            remove_temp_weight_file(weight_index)
+            if remove_weights:
+                remove_temp_weight_file(weight_index)
         return object
 
     def save_config(self, file_path, with_weights=False):

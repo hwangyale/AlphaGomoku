@@ -14,7 +14,7 @@ kwargs = {
     },
     'self_play_number': 4,
     'self_play_batch_size': 10,
-    'self_play_cache_step': 20,
+    'self_play_cache_step': 10,
     'evaluate_mcts_config': {
         'traverse_time': 10, 'c_puct': None,
         'thread_number': 1, 'delete_threshold': 100

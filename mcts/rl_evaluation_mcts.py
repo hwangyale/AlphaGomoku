@@ -13,12 +13,6 @@ from .evaluation_mcts import EvaluationTraversal, EvaluationMCTS
 
 
 class RLNode(Node):
-    def reset(self):
-        self.indice2parents = {}
-        self.expanded = False
-        self.value = None
-        self.estimated = False
-
     def select(self, board, thread_index, virtual_loss=None,
                virtual_visit=None, c_puct=None):
         if virtual_loss is None:
@@ -90,9 +84,6 @@ class RLEvaluationMCTS(EvaluationMCTS):
 
     def mcts(self, board, verbose=1, verbose_endline=True):
         actions = super(RLEvaluationMCTS, self).mcts(board, verbose, RLNode, verbose_endline)
-        self.tuple_table.clear()
-        self.action_table.clear()
-        self.value_table.clear()
         return actions
 
     def get_visit_container(self, board):

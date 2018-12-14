@@ -80,8 +80,8 @@ class SelfPlayBase(object):
         return config
 
     @classmethod
-    def from_config(cls, config):
-        mcts, boards = mcts_get(config.pop('mcts'))
+    def from_config(cls, config, remove_weights=True):
+        mcts, boards = mcts_get(config.pop('mcts'), remove_weights=remove_weights)
         raw_samples = config.pop('raw_samples', None)
         sf = cls(mcts, initialize=False)
         sf.__dict__.update(config)
@@ -283,8 +283,8 @@ class MainLoopBase(object):
     def load_cache(self):
         folder = self.get_cache_folder()
         config = json_load_tuple(os.path.join(folder, 'main_loop_config.json'))
-        self.best_network = network_get(config.pop('best_network'))
-        self.current_network = network_get(config.pop('current_network'))
+        self.best_network = network_get(config.pop('best_network'), remove_weights=False)
+        self.current_network = network_get(config.pop('current_network'), remove_weights=False)
         self.__dict__.update(config)
 
     def get_config(self):
@@ -345,7 +345,7 @@ class EvaluationMainLoop(MainLoopBase):
             elif self.state == 1:
                 self_play_file = self.get_cache_self_play_path()
                 sf_config = json_load_tuple(self_play_file)
-                sf = EvaluationSelfPlay.from_config(sf_config)
+                sf = EvaluationSelfPlay.from_config(sf_config, remove_weights=False)
                 print('self-play:')
                 generator = sf.generator()
                 try:

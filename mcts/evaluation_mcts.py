@@ -127,7 +127,7 @@ class EvaluationMCTS(MCTSBase):
                      node_pool,
                      self.get_left_pool(board),
                      self.delete_threshold, self.tuple_table,
-                     self.action_table, self.value_table)
+                     self.action_table, self.value_table, self.key_queue)
             root = node_pool[board.zobristKey]
             root.estimate(MCTSBoard(board, True))
             if value_table[board.zobristKey] is not None:
@@ -190,6 +190,12 @@ class EvaluationMCTS(MCTSBase):
                 node.reset()
                 node_pool[key] = node
 
+        while self.key_queue.qsize() > MCTS_TABLE_CONTAINER:
+            key = self.key_queue.get()
+            self.tuple_table.pop(key, None)
+            self.action_table.pop(key, None)
+            self.value_table.pop(key, None)
+
         return tosingleton([actions[board] for board in boards])
 
     def process_root(self, board, root):
@@ -218,7 +224,8 @@ class EvaluationMCTS(MCTSBase):
 
     @classmethod
     def from_config(cls, config, *args, **kwargs):
-        mixture_network = network_get(config.pop('mixture_network'))
+        remove_weights = kwargs.pop('remove_weights', True)
+        mixture_network = network_get(config.pop('mixture_network'), remove_weights=remove_weights)
         tree, boards = super(EvaluationMCTS, cls).from_config(config, *args, **kwargs)
         tree.mixture_network = mixture_network
         return tree, boards

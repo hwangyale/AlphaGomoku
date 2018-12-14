@@ -14,8 +14,8 @@ def run():
             'thread_number': 1, 'delete_threshold': 10
         },
         'self_play_number': 1000,
-        'self_play_batch_size': 10,
-        'self_play_cache_step': 4,
+        'self_play_batch_size': 20,
+        'self_play_cache_step': 2,
         'evaluate_mcts_config': {
             'traverse_time': 1000, 'c_puct': None,
             'thread_number': 1, 'delete_threshold': 10

@@ -1,3 +1,4 @@
+import queue
 import numpy as np
 from ..global_constants import *
 from ..common import *
@@ -146,18 +147,20 @@ class Node(object):
     def __init__(self, zobristKey=None, node_pool=None,
                  left_pool=None, delete_threshold=None,
                  tuple_table=None, action_table=None,
-                 value_table=None, add_to_tree=True):
+                 value_table=None, key_queue=None, add_to_tree=True):
         self.initialized = False
         if add_to_tree:
             self.add_to_tree(zobristKey, node_pool,
                              left_pool, delete_threshold,
-                             tuple_table, action_table, value_table)
+                             tuple_table, action_table,
+                             value_table, key_queue)
         else:
             self.initialize()
 
     def add_to_tree(self, zobristKey, node_pool,
                     left_pool, delete_threshold,
-                    tuple_table, action_table, value_table):
+                    tuple_table, action_table,
+                    value_table, key_queue):
         if zobristKey not in node_pool:
             node_pool[zobristKey] = self
             self.zobristKey = zobristKey
@@ -167,6 +170,7 @@ class Node(object):
             self.tuple_table = tuple_table
             self.action_table = action_table
             self.value_table = value_table
+            self.key_queue = key_queue
             if not self.initialized:
                 self.initialize()
         elif node_pool[zobristKey].N_r > delete_threshold:
@@ -186,6 +190,8 @@ class Node(object):
     def reset(self):
         self.indice2parents = {}
         self.expanded = False
+        self.value = None
+        self.estimated = False
 
     def develop(self, board, distribution):
         if self.expanded:
@@ -213,7 +219,7 @@ class Node(object):
         for key, action, prob in tuples:
             self.__class__(key, self.node_pool, self.left_pool,
                            self.delete_threshold, self.tuple_table,
-                           self.action_table, self.value_table)
+                           self.action_table, self.value_table, self.key_queue)
         self.expanded = True
 
     def select(self, board, thread_index, virtual_loss=None,
@@ -269,6 +275,7 @@ class Node(object):
                 expand_actions, value = board.expand()
                 self.action_table[board.zobristKey] = expand_actions
                 self.value_table[board.zobristKey] = value
+                self.key_queue.put(board.zobristKey)
             else:
                 value = self.value_table[board.zobristKey]
             self.value = value
@@ -333,6 +340,7 @@ class MCTSBase(object):
         self.value_table = {}
         self.condition = CONDITION if condition is None else condition
         self.board_indice = {}
+        self.key_queue = queue.Queue()
 
     def get_board_index(self, board):
         return self.board_indice.setdefault(board, len(self.board_indice))
@@ -366,6 +374,13 @@ class MCTSBase(object):
         config['action_table'] = list(self.action_table.items())
         config['value_table'] = list(self.value_table.items())
 
+        keys = []
+        while not self.key_queue.empty():
+            keys.append(self.key_queue.get())
+        for key in keys:
+            self.key_queue.put(key)
+        config['key_queue'] = keys
+
         return config
 
     @classmethod
@@ -382,6 +397,7 @@ class MCTSBase(object):
         tuple_table = tree.tuple_table
         action_table = tree.action_table
         value_table = tree.value_table
+        key_queue = tree.key_queue
 
         boards = []
         for board_config, index in config['board_indice']:
@@ -392,11 +408,14 @@ class MCTSBase(object):
             for key, node_config in config['node_pools'][index]:
                 node = node_cls.from_config(node_config)
                 node.add_to_tree(key, node_pool, left_pool, delete_threshold,
-                                 tuple_table, action_table, value_table)
+                                 tuple_table, action_table, value_table, key_queue)
             boards.append(board)
 
         tuple_table.update(dict(config['tuple_table']))
         action_table.update(dict(config['action_table']))
         value_table.update(dict(config['value_table']))
+
+        for key in config['key_queue']:
+            key_queue.put(key)
 
         return tree, boards
