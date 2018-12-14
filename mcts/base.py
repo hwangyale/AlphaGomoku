@@ -370,16 +370,16 @@ class MCTSBase(object):
                                   for board, idx in self.board_indice.items()]
         config['node_pools'] = [[(key, node.get_config()) for key, node in npl.items()]
                                 for npl in self.node_pools]
-        config['tuple_table'] = list(self.tuple_table.items())
-        config['action_table'] = list(self.action_table.items())
-        config['value_table'] = list(self.value_table.items())
-
-        keys = []
-        while not self.key_queue.empty():
-            keys.append(self.key_queue.get())
-        for key in keys:
-            self.key_queue.put(key)
-        config['key_queue'] = keys
+        # config['tuple_table'] = list(self.tuple_table.items())
+        # config['action_table'] = list(self.action_table.items())
+        # config['value_table'] = list(self.value_table.items())
+        #
+        # keys = []
+        # while not self.key_queue.empty():
+        #     keys.append(self.key_queue.get())
+        # for key in keys:
+        #     self.key_queue.put(key)
+        # config['key_queue'] = keys
 
         return config
 
@@ -411,11 +411,11 @@ class MCTSBase(object):
                                  tuple_table, action_table, value_table, key_queue)
             boards.append(board)
 
-        tuple_table.update(dict(config['tuple_table']))
-        action_table.update(dict(config['action_table']))
-        value_table.update(dict(config['value_table']))
-
-        for key in config['key_queue']:
-            key_queue.put(key)
+        # tuple_table.update(dict(config['tuple_table']))
+        # action_table.update(dict(config['action_table']))
+        # value_table.update(dict(config['value_table']))
+        #
+        # for key in config['key_queue']:
+        #     key_queue.put(key)
 
         return tree, boards
