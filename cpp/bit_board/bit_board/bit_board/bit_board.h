@@ -27,7 +27,7 @@
 #define THREE 4
 #define OPEN_TWO 5
 
-#define MAX_BOARD 1000000
+#define INIT_MAX_BOARD 1000000
 #define GOMOKU_TYPE_CONTAINER 225
 #define ACTION_CONTAINER 225
 #define RANGE 9
@@ -43,6 +43,7 @@ typedef int(*MOVE)(int, int);
 typedef std::unordered_set<int> ISET;
 typedef std::vector<int> IVEC;
 typedef unsigned char UC;
+typedef std::vector<UC> UCVEC;
 typedef std::bitset<2 * BOARD_SIZE> GBIT;
 
 inline char player_mapping(char player)

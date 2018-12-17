@@ -63,7 +63,7 @@ int main()
 		if (board.player == BLACK)
 		{
 			clock_t start = clock();
-			action = vct(board, 14, 3600);
+			action = vct(board, 20, 3600);
 			printf("vct time: %.4fms\n", (double)(clock() - start));
 		}
 		else

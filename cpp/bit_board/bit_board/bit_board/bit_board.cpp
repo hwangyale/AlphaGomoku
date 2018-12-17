@@ -1,10 +1,11 @@
 #include "bit_board.h"
 
-UC SHARED_GOMOKU_TYPES[MAX_BOARD * GOMOKU_TYPE_CONTAINER] = { 0 };
-UC SHARED_DIRECTIONS[MAX_BOARD * GOMOKU_TYPE_CONTAINER] = { 0 };
-UC SHARED_ACTIONS[MAX_BOARD * ACTION_CONTAINER] = { 0 };
+UCVEC SHARED_GOMOKU_TYPES = UCVEC(INIT_MAX_BOARD * GOMOKU_TYPE_CONTAINER, 0);
+UCVEC SHARED_DIRECTIONS = UCVEC(INIT_MAX_BOARD * GOMOKU_TYPE_CONTAINER, 0);
+UCVEC SHARED_ACTIONS = UCVEC(INIT_MAX_BOARD * ACTION_CONTAINER, 0);
 int SHARED_INDEX = 0;
-int SHARED_INDEX_QUEUE[MAX_BOARD] = { 0 }, SHARED_INDEX_HEAD = 0, SHARED_INDEX_TAIL = 0;
+IVEC SHARED_INDEX_QUEUE = IVEC(INIT_MAX_BOARD, 0);
+int SHARED_INDEX_HEAD = 0, SHARED_INDEX_TAIL = 0;
 
 extern Table TABLE;
 
@@ -13,15 +14,31 @@ void BitBoard::allocate()
 	if (!allocated)
 	{
 		int shared_index;
+		int size = (int)SHARED_INDEX_QUEUE.size();
 		if (SHARED_INDEX_HEAD != SHARED_INDEX_TAIL)
 		{
 			shared_index = SHARED_INDEX_QUEUE[SHARED_INDEX_HEAD];
-			SHARED_INDEX_HEAD = (SHARED_INDEX_HEAD + 1) % MAX_BOARD;
+			SHARED_INDEX_HEAD = (SHARED_INDEX_HEAD + 1) % size;
 		}
 		else
 		{
 			shared_index = SHARED_INDEX;
 			SHARED_INDEX++;
+			if (SHARED_INDEX == size)
+			{
+				SHARED_GOMOKU_TYPES.resize(2 * size * GOMOKU_TYPE_CONTAINER, 0);
+				SHARED_DIRECTIONS.resize(2 * size * GOMOKU_TYPE_CONTAINER, 0);
+				SHARED_ACTIONS.resize(2 * size * ACTION_CONTAINER, 0);
+				SHARED_INDEX_QUEUE.resize(2 * size, 0);
+				if (SHARED_INDEX_TAIL < SHARED_INDEX_HEAD)
+				{
+					for (int i = 0; i < SHARED_INDEX_TAIL; i++)
+					{
+						SHARED_INDEX_QUEUE[size + i] = SHARED_INDEX_QUEUE[i];
+					}
+					SHARED_INDEX_TAIL += size;
+				}
+			}
 		}
 		gomoku_indice[0] = shared_index * GOMOKU_TYPE_CONTAINER;
 		action_indice[0] = shared_index * ACTION_CONTAINER;
@@ -34,7 +51,7 @@ void BitBoard::release()
 	if (allocated)
 	{
 		SHARED_INDEX_QUEUE[SHARED_INDEX_TAIL] = gomoku_indice[0] / GOMOKU_TYPE_CONTAINER;
-		SHARED_INDEX_TAIL = (SHARED_INDEX_TAIL + 1) % MAX_BOARD;
+		SHARED_INDEX_TAIL = (SHARED_INDEX_TAIL + 1) % INIT_MAX_BOARD;
 		allocated = false;
 	}
 }
@@ -131,16 +148,19 @@ void BitBoard::copy(const BitBoard &copyboard)
 
 	if (gomoku_indice[10] != gomoku_indice[0])
 	{
-		memcpy(SHARED_GOMOKU_TYPES + gomoku_indice[0], SHARED_GOMOKU_TYPES + copyboard.gomoku_indice[0],
-			   (gomoku_indice[10] - gomoku_indice[0]) * sizeof(UC));
-		memcpy(SHARED_DIRECTIONS + gomoku_indice[0], SHARED_DIRECTIONS + copyboard.gomoku_indice[0],
-			   (gomoku_indice[10] - gomoku_indice[0]) * sizeof(UC));
+		for (i = 0; i < gomoku_indice[10] - gomoku_indice[0]; i++)
+		{
+			SHARED_GOMOKU_TYPES[gomoku_indice[0] + i] = SHARED_GOMOKU_TYPES[copyboard.gomoku_indice[0] + i];
+			SHARED_DIRECTIONS[gomoku_indice[0] + i] = SHARED_DIRECTIONS[copyboard.gomoku_indice[0] + i];
+		}
 	}
 
 	if (action_indice[10] != action_indice[0])
 	{
-		memcpy(SHARED_ACTIONS + action_indice[0], SHARED_ACTIONS + copyboard.action_indice[0],
-			   (action_indice[10] - action_indice[0]) * sizeof(UC));
+		for (i = 0; i < action_indice[10] - action_indice[0]; i++)
+		{
+			SHARED_ACTIONS[action_indice[0] + i] = SHARED_ACTIONS[copyboard.action_indice[0] + i];
+		}
 	}
 
 	for (i = 0; i < 4; i++)

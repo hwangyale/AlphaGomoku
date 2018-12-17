@@ -547,7 +547,6 @@ void generate_actions(int gomoku_type, bool is_player,
 				{
 					continue;
 				}
-				//std::cout << is_player << " " << gomoku_type << " " << line << std::endl;
 				color = line[2 * center + 1];
 				action_container[0] = 0;
 				get_action_func(line, center, color, is_open, is_player,

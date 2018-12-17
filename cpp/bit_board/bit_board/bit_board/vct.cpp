@@ -1,9 +1,9 @@
 #include "bit_board.h"
 #include <unordered_map>
 #include "time.h"
-#define NODE_TABLE_CONTAINER 1000000
+#define INIT_NODE_TABLE_CONTAINER 2000000
 
-#define BOARD_TABLE_CONTAINER 500000
+#define INIT_BOARD_TABLE_CONTAINER 1000000
 #define SHARED_CONTAINER 5000000
 #define OR 0
 #define AND 1
@@ -41,10 +41,12 @@ public:
 	int update(std::unordered_map<U64, bool> &cache_table);
 };
 
-Node NODE_TABLE[NODE_TABLE_CONTAINER];
-BitBoard BOARD_TABLE[BOARD_TABLE_CONTAINER];
-int NODE_QUEUE[NODE_TABLE_CONTAINER], NODE_POINTER, NODE_QUEUE_HEAD, NODE_QUEUE_TAIL;
-int BOARD_QUEUE[BOARD_TABLE_CONTAINER], BOARD_POINTER, BOARD_QUEUE_HEAD, BOARD_QUEUE_TAIL;
+std::vector<Node> NODE_TABLE = std::vector<Node>(INIT_NODE_TABLE_CONTAINER);
+std::vector<BitBoard> BOARD_TABLE = std::vector<BitBoard>(INIT_BOARD_TABLE_CONTAINER);
+IVEC NODE_QUEUE = IVEC(INIT_NODE_TABLE_CONTAINER, 0);
+int NODE_POINTER, NODE_QUEUE_HEAD, NODE_QUEUE_TAIL;
+IVEC BOARD_QUEUE = IVEC(INIT_BOARD_TABLE_CONTAINER, 0);
+int BOARD_POINTER, BOARD_QUEUE_HEAD, BOARD_QUEUE_TAIL;
 
 void initial_tables()
 {
@@ -58,21 +60,36 @@ void initial_tables()
 
 void release_node(int pointer)
 {
+	int size = (int)NODE_QUEUE.size();
 	NODE_QUEUE[NODE_QUEUE_TAIL] = pointer;
-	NODE_QUEUE_TAIL = (NODE_QUEUE_TAIL + 1) % NODE_TABLE_CONTAINER;
+	NODE_QUEUE_TAIL = (NODE_QUEUE_TAIL + 1) % size;
 }
 
 int allocate_node()
 {
 	int pointer;
+	int size = (int)NODE_QUEUE.size();
 	if (NODE_QUEUE_HEAD != NODE_QUEUE_TAIL)
 	{
 		pointer = NODE_QUEUE[NODE_QUEUE_HEAD];
-		NODE_QUEUE_HEAD = (NODE_QUEUE_HEAD + 1) % NODE_TABLE_CONTAINER;
+		NODE_QUEUE_HEAD = (NODE_QUEUE_HEAD + 1) % size;
 	}
 	else
 	{
 		pointer = NODE_POINTER++;
+		/*if (NODE_POINTER == size)
+		{
+			NODE_TABLE.resize(2 * size);
+			NODE_QUEUE.resize(2 * size);
+			if (NODE_QUEUE_TAIL < NODE_QUEUE_HEAD)
+			{
+				for (int i = 0; i < NODE_QUEUE_TAIL; i++)
+				{
+					NODE_QUEUE[size + i] = NODE_QUEUE[i];
+				}
+				NODE_QUEUE_TAIL += size;
+			}
+		}*/
 	}
 	NODE_TABLE[pointer].reset();
 	return pointer;
@@ -80,22 +97,37 @@ int allocate_node()
 
 void release_board(int pointer)
 {
+	int size = (int)BOARD_QUEUE.size();
 	BOARD_QUEUE[BOARD_QUEUE_TAIL] = pointer;
-	BOARD_QUEUE_TAIL = (BOARD_QUEUE_TAIL + 1) % BOARD_TABLE_CONTAINER;
+	BOARD_QUEUE_TAIL = (BOARD_QUEUE_TAIL + 1) % size;
 	BOARD_TABLE[pointer].release();
 }
 
 int allocate_board()
 {
 	int pointer;
+	int size = (int)BOARD_QUEUE.size();
 	if (BOARD_QUEUE_HEAD != BOARD_QUEUE_TAIL)
 	{
 		pointer = BOARD_QUEUE[BOARD_QUEUE_HEAD];
-		BOARD_QUEUE_HEAD = (BOARD_QUEUE_HEAD + 1) % BOARD_TABLE_CONTAINER;
+		BOARD_QUEUE_HEAD = (BOARD_QUEUE_HEAD + 1) % size;
 	}
 	else
 	{
 		pointer = BOARD_POINTER++;
+		/*if (BOARD_POINTER == size)
+		{
+			BOARD_TABLE.resize(2 * size);
+			BOARD_QUEUE.resize(2 * size);
+			if (BOARD_QUEUE_TAIL < BOARD_QUEUE_HEAD)
+			{
+				for (int i = 0; i < BOARD_QUEUE_TAIL; i++)
+				{
+					BOARD_QUEUE[size + i] = BOARD_QUEUE[i];
+				}
+				BOARD_QUEUE_TAIL += size;
+			}
+		}*/
 	}
 	BOARD_TABLE[pointer].allocate();
 	return pointer;
@@ -320,9 +352,9 @@ int Node::update(std::unordered_map<U64, bool> &cache_table)
 	return pointer;
 }
 
-extern UC SHARED_GOMOKU_TYPES[MAX_BOARD * GOMOKU_TYPE_CONTAINER];
-extern UC SHARED_DIRECTIONS[MAX_BOARD * GOMOKU_TYPE_CONTAINER];
-extern UC SHARED_ACTIONS[MAX_BOARD * ACTION_CONTAINER];
+extern UCVEC SHARED_GOMOKU_TYPES;
+extern UCVEC SHARED_DIRECTIONS;
+extern UCVEC SHARED_ACTIONS;
 extern int SHARED_INDEX;
 extern int SHARED_INDEX_HEAD, SHARED_INDEX_TAIL;
 

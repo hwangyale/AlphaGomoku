@@ -2,9 +2,9 @@
 
 extern Table TABLE;
 extern GomokuTypeTable GOMOKU_TYPE_TABLE;
-extern UC SHARED_GOMOKU_TYPES[MAX_BOARD * GOMOKU_TYPE_CONTAINER];
-extern UC SHARED_DIRECTIONS[MAX_BOARD * GOMOKU_TYPE_CONTAINER];
-extern UC SHARED_ACTIONS[MAX_BOARD * ACTION_CONTAINER];
+extern UCVEC SHARED_GOMOKU_TYPES;
+extern UCVEC SHARED_DIRECTIONS;
+extern UCVEC SHARED_ACTIONS;
 
 inline int hor_move(int action, int d)
 {
@@ -38,7 +38,7 @@ MOVE move_list[4] = { hor_move, ver_move, dia_move, bac_move };
 
 bool check_single_action(BitBoard &board, UC action, UC direction, 
 						 bool is_player, int gomoku_type,
-						 UC container[], int begin, int &count, 
+						 UCVEC &container, int begin, int &count, 
 						 std::bitset<STONES> &stored)
 {
 	int center, _count = 0, tmp_action;
@@ -87,7 +87,6 @@ void set_continue_stones(BitBoard &board, int action, int direction, int color,
 			if (masked_line[2 * tmp_position] == 0) break;
 			if (masked_line[2 * tmp_position + 1] != color) break;
 			tmp_action = move_func(action, sign * d);
-			//if (tmp_action < 0 || tmp_action >= STONES) break;
 			searched.set(tmp_action);
 		}
 	}
@@ -107,10 +106,11 @@ void BitBoard::check_gomoku_type()
 	static std::bitset<STONES> block_searched[4];
 	
 	memcpy(tmp_gomoku_indice, gomoku_indice, sizeof(tmp_gomoku_indice));
-	memcpy(gomoku_types, SHARED_GOMOKU_TYPES + gomoku_indice[0],
-		   (gomoku_indice[10] - gomoku_indice[0]) * sizeof(UC));
-	memcpy(gomoku_directions, SHARED_DIRECTIONS + gomoku_indice[0],
-		   (gomoku_indice[10] - gomoku_indice[0]) * sizeof(UC));
+	for (int i = 0; i < gomoku_indice[10] - gomoku_indice[0]; i++)
+	{
+		gomoku_types[i] = SHARED_GOMOKU_TYPES[gomoku_indice[0] + i];
+		gomoku_directions[i] = SHARED_DIRECTIONS[gomoku_indice[0] + i];
+	}
 
 	int opponent = player_mapping(player);
 	int direction, index, end_index;
