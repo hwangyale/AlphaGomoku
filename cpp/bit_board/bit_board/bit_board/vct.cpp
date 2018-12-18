@@ -5,6 +5,7 @@
 
 #define INIT_BOARD_TABLE_CONTAINER 1000000
 #define SHARED_CONTAINER 5000000
+#define VCT_TABLE_LIMIT 2000000
 #define OR 0
 #define AND 1
 #define INF 10000000
@@ -390,6 +391,15 @@ int vct(BitBoard &board, int max_depth, double max_time)
 		}
 	}
 
+	if (BLACK_VCT_TABLE.size() > VCT_TABLE_LIMIT)
+	{
+		BLACK_VCT_TABLE.clear();
+	}
+	if (WHITE_VCT_TABLE.size() > VCT_TABLE_LIMIT)
+	{
+		WHITE_VCT_TABLE.clear();
+	}
+
 	VCT_SHARED_TABLE[0] = 0;
 	int pointer = allocate_node(), unknown; 
 	Node &root = NODE_TABLE[pointer];
@@ -414,6 +424,8 @@ int vct(BitBoard &board, int max_depth, double max_time)
 
 	#ifdef VCT_TEST
 	printf("node pointer: %d\n", NODE_POINTER);
+	printf("size of black vct table: %d size of white vct table: %d\n",
+		   (int)BLACK_VCT_TABLE.size(), (int)WHITE_VCT_TABLE.size());
 	#endif
 
 	if (root.proof == 0)
