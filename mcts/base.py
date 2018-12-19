@@ -366,7 +366,7 @@ class MCTSBase(object):
             'condition': None
         }
 
-        config['board_indice'] = [(board.get_config(), idx)
+        config['board_indice'] = [(board.get_config(), idx, id(board))
                                   for board, idx in self.board_indice.items()]
         config['node_pools'] = [[(key, node.get_config()) for key, node in npl.items()]
                                 for npl in self.node_pools]
@@ -400,16 +400,20 @@ class MCTSBase(object):
         key_queue = tree.key_queue
 
         boards = []
-        for board_config, index in config['board_indice']:
+        ids = []
+        for board_config, index, board_id in config['board_indice']:
             board = board_cls.from_config(board_config)
             tree.board_indice[board] = index
+            boards.append(board)
+            ids.append(board_id)
+            if index >= len(config['node_pools']):
+                continue
             node_pool = tree.get_node_pool(board)
             left_pool = tree.get_left_pool(board)
             for key, node_config in config['node_pools'][index]:
                 node = node_cls.from_config(node_config)
                 node.add_to_tree(key, node_pool, left_pool, delete_threshold,
                                  tuple_table, action_table, value_table, key_queue)
-            boards.append(board)
 
         # tuple_table.update(dict(config['tuple_table']))
         # action_table.update(dict(config['action_table']))
@@ -418,4 +422,4 @@ class MCTSBase(object):
         # for key in config['key_queue']:
         #     key_queue.put(key)
 
-        return tree, boards
+        return tree, boards, ids

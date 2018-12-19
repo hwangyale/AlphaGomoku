@@ -33,6 +33,8 @@ class SelfPlayBase(object):
             index = min(batch_size, number)
             self.index = index
             self.boards = set(Board() for _ in range(index))
+            for board in self.boards:
+                self.mcts.get_board_index(board)
             self.step = 0
             self.finished = 0
 
@@ -43,6 +45,9 @@ class SelfPlayBase(object):
         boards = self.boards
         while len(boards) > 0:
             yield self.step, self.finished
+            while self.index < number and len(boards) < batch_size:
+                boards.add(Board())
+                self.index += 1
             temp_boards = list(boards)
             actions = tolist(mcts.mcts(temp_boards, verbose=1))
             for board, action in zip(temp_boards, actions):
@@ -50,9 +55,6 @@ class SelfPlayBase(object):
                 if board.is_over:
                     boards.remove(board)
                     self.finished += 1
-                    if self.index < number:
-                        boards.add(Board())
-                        self.index += 1
             self.step += 1
         self.raw_samples = self.get_samples_from_mcts(mcts)
         yield self.step, self.finished
@@ -81,7 +83,7 @@ class SelfPlayBase(object):
 
     @classmethod
     def from_config(cls, config, remove_weights=True):
-        mcts, boards = mcts_get(config.pop('mcts'), remove_weights=remove_weights)
+        mcts, boards, ids = mcts_get(config.pop('mcts'), remove_weights=remove_weights)
         raw_samples = config.pop('raw_samples', None)
         sf = cls(mcts, initialize=False)
         sf.__dict__.update(config)
@@ -110,42 +112,91 @@ class EvaluationSelfPlay(SelfPlayBase):
 
 
 class Evaluator(object):
-    def __init__(self, best_mcts, new_mcts, boards_each_side):
+    def __init__(self, best_mcts, new_mcts, boards_each_side,
+                 batch_size, initialize=True):
         self.mcts = [best_mcts, new_mcts]
         self.boards_each_side = boards_each_side
+        self.batch_size = batch_size
+        if initialize:
+            self.boards = set()
+            self.count = 0
+            self.player = 0
+            for _ in range(min(batch_size, 2*boards_each_side)):
+                board = Board()
+                self.boards.add((board, self.count % 2))
+                self.count += 1
+                self.mcts[self.player].get_board_index(board)
+                self.mcts[self.player^1].get_board_index(board)
+            self.step = 0
+            self.finished = 0
+            self.win = 0
+            self.loss = 0
+            self.draw = 0
 
     def generator(self):
-        mcts = self.mcts
-        boards = set()
-        for ply in [0, 1]:
-            for _ in range(self.boards_each_side):
-                boards.add((Board(), ply))
-        step = 0
-        finished = 0
-        player = 0
-        win = 0
-        loss = 0
-        draw = 0
-        while len(boards) > 0:
-            yield step, finished, win, loss, draw
-            temp_boards = [board for board, ply in boards if ply == player]
-            actions = tolist(mcts[player].mcts(temp_boards, verbose=1))
+        while len(self.boards) > 0:
+            yield self.step, self.finished, self.win, self.loss, self.draw
+            while self.count < 2 * self.boards_each_side and len(self.boards) < self.batch_size:
+                board = Board()
+                self.boards.add((board, self.count % 2))
+                self.count += 1
+                self.mcts[self.player].get_board_index(board)
+                self.mcts[self.player^1].get_board_index(board)
+            temp_boards = [board for board, ply in self.boards if ply == self.player]
+            actions = tolist(self.mcts[self.player].mcts(temp_boards, verbose=1))
             for board, action in zip(temp_boards, actions):
                 board.move(action)
-                boards.remove((board, player))
+                self.boards.remove((board, self.player))
                 if board.is_over:
-                    finished += 1
+                    self.finished += 1
                     if board.winner == DRAW:
-                        draw += 1
-                    elif player == 1:
-                        win += 1
+                        self.draw += 1
+                    elif self.player == 1:
+                        self.win += 1
                     else:
-                        loss += 1
+                        self.loss += 1
                 else:
-                    boards.add((board, player ^ 1))
-            player ^= 1
-            step += 1
-        yield step, finished, win, loss, draw
+                    self.boards.add((board, self.player ^ 1))
+            self.player ^= 1
+            self.step += 1
+        yield self.step, self.finished, self.win, self.loss, self.draw
+
+    def get_config(self):
+        config = {
+            'best_mcts': serialize_object(self.mcts[0]),
+            'new_mcts': serialize_object(self.mcts[1]),
+            'boards_each_side': self.boards_each_side,
+            'batch_size': self.batch_size,
+            'boards': [(id(board), ply) for board, ply in self.boards],
+            'count': self.count, 
+            'player': self.player,
+            'step': self.step,
+            'finished': self.finished,
+            'win': self.win,
+            'loss': self.loss,
+            'draw': self.draw
+        }
+        return config
+
+    @classmethod
+    def from_config(cls, config, remove_weights=True):
+        best_mcts, best_boards, best_ids = mcts_get(
+            config.pop('best_mcts'), remove_weights=remove_weights)
+        new_mcts, new_boards, new_ids = mcts_get(
+            config.pop('new_mcts'), remove_weights=remove_weights)
+        board_config = config.pop('boards')
+        evaluator = cls(best_mcts, new_mcts, config.pop('boards_each_side'),
+                        config.pop('batch_size'), initialize=False)
+        evaluator.__dict__.update(config)
+
+        ids2boards = {board_id: board for board_id, board in zip(best_ids, best_boards)}
+        for board, board_id in zip(new_boards, new_ids):
+            index = new_mcts.board_indice.pop(board)
+            new_mcts.board_indice[ids2boards[board_id]] = index
+
+        evaluator.boards = set((ids2boards[board_id], ply)
+                               for board_id, ply in board_config)
+        return evaluator
 
 
 class RLTrainerBase(TrainerBase):
@@ -243,7 +294,9 @@ class MainLoopBase(object):
                 'thread_number': 1, 'delete_threshold': 10
             },
             'evaluate_number': 100,
+            'evaluate_batch_size': 20,
             'evaluate_win_ratio': 0.55,
+            'evaluate_cache_step': 10,
             'train': {
                 'batch_size': 128,
                 'epochs': 100,
@@ -268,6 +321,10 @@ class MainLoopBase(object):
     def get_cache_self_play_path(self):
         folder = self.get_cache_folder()
         return os.path.join(folder, 'self_play_{}.json'.format(self.self_play_index))
+
+    def get_cache_evaluate_path(self):
+        folder = self.get_cache_folder()
+        return os.path.join(folder, 'evaluate_{}.json'.format(self.self_play_index))
 
     def get_cache_self_play_sample_path(self):
         folder = self.get_cache_folder()
@@ -394,12 +451,14 @@ class EvaluationMainLoop(MainLoopBase):
                 self.cache()
                 print('')
 
-            else:
+            elif self.state == 4:
                 evaluate_number = config['evaluate_number']
                 evaluator = Evaluator(EvaluationMCTS(self.best_network, **config['evaluate_mcts_config']),
                                       EvaluationMCTS(self.current_network, **config['evaluate_mcts_config']),
-                                      evaluate_number)
+                                      evaluate_number, config['evaluate_batch_size'])
                 print('evaluation:')
+                evaluate_file = self.get_cache_evaluate_path()
+                pre_eval_config = None
                 number = 2 * evaluate_number
                 for step, finished, win, loss, draw in evaluator.generator():
                     print('finished: {}/{} step: {} win: {} loss: {} draw: {}'
@@ -408,6 +467,46 @@ class EvaluationMainLoop(MainLoopBase):
                         break
                     if (loss + draw) / float(number) > 1 - config['evaluate_win_ratio']:
                         break
+                    if step % config['evaluate_cache_step'] == 0:
+                        eval_config = evaluator.get_config()
+                        json_dump_tuple(eval_config, evaluate_file)
+                        if pre_eval_config is not None:
+                            Evaluator.from_config(pre_eval_config)
+                        pre_eval_config = eval_config
+                        if self.state == 4:
+                            self.state = 5
+                            self.cache()
+                print('\n')
+                if win / float(number) >= config['evaluate_win_ratio']:
+                    self.best_network = self.copy_network(self.current_network)
+                    self.state = 0
+                else:
+                    self.state = 2
+                clear_temp_weight_files()
+                self.cache()
+
+            else:
+                evaluate_file = self.get_cache_evaluate_path()
+                eval_config = json_load_tuple(evaluate_file)
+                evaluator = Evaluator.from_config(eval_config, remove_weights=False)
+                evaluate_number = config['evaluate_number']
+                print('evaluation:')
+                evaluate_file = self.get_cache_evaluate_path()
+                pre_eval_config = None
+                number = 2 * evaluate_number
+                for step, finished, win, loss, draw in evaluator.generator():
+                    print('finished: {}/{} step: {} win: {} loss: {} draw: {}'
+                          .format(finished, number, step, win, loss, draw))
+                    if win / float(number) >= config['evaluate_win_ratio']:
+                        break
+                    if (loss + draw) / float(number) > 1 - config['evaluate_win_ratio']:
+                        break
+                    if step % config['evaluate_cache_step'] == 0:
+                        eval_config = evaluator.get_config()
+                        json_dump_tuple(eval_config, evaluate_file)
+                        if pre_eval_config is not None:
+                            Evaluator.from_config(pre_eval_config)
+                        pre_eval_config = eval_config
                 print('\n')
                 if win / float(number) >= config['evaluate_win_ratio']:
                     self.best_network = self.copy_network(self.current_network)

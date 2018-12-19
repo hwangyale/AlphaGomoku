@@ -1,0 +1,1 @@
+"{\"loss\": {\"value\": \"mean_squared_error\", \"distribution\": \"categorical_crossentropy\"}, \"metrics\": {\"distribution\": \"acc\"}, \"loss_weights\": {\"value\": 1.0, \"distribution\": 1.0}}"

@@ -136,7 +136,7 @@ class RLEvaluationMCTS(EvaluationMCTS):
     def from_config(cls, config, *args, **kwargs):
         visit_containers = config.pop('visit_containers')
         kwargs['node_cls'] = RLNode
-        tree, boards = super(RLEvaluationMCTS, cls).from_config(config, *args, **kwargs)
+        tree, boards, ids = super(RLEvaluationMCTS, cls).from_config(config, *args, **kwargs)
         tree.visit_containers = [json_to_tuples(visits)
                                  for visits in visit_containers]
-        return tree, boards
+        return tree, boards, ids

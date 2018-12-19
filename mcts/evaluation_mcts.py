@@ -226,6 +226,6 @@ class EvaluationMCTS(MCTSBase):
     def from_config(cls, config, *args, **kwargs):
         remove_weights = kwargs.pop('remove_weights', True)
         mixture_network = network_get(config.pop('mixture_network'), remove_weights=remove_weights)
-        tree, boards = super(EvaluationMCTS, cls).from_config(config, *args, **kwargs)
+        tree, boards, ids = super(EvaluationMCTS, cls).from_config(config, *args, **kwargs)
         tree.mixture_network = mixture_network
-        return tree, boards
+        return tree, boards, ids
