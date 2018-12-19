@@ -129,7 +129,8 @@ class EvaluationMCTS(MCTSBase):
                      self.delete_threshold, self.tuple_table,
                      self.action_table, self.value_table, self.key_queue)
             root = node_pool[board.zobristKey]
-            root.estimate(MCTSBoard(board, True))
+            self.value_table.pop(board.zobristKey, None)
+            root.estimate(MCTSBoard(board, True), MCTS_ROOT_VCT_DEPTH, MCTS_ROOT_VCT_TIME)
             if value_table[board.zobristKey] is not None:
                 actions[board] = self.process_root(board, root)
             else:

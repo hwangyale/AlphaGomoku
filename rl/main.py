@@ -13,7 +13,7 @@ def run():
             'traverse_time': 500, 'c_puct': None,
             'thread_number': 1, 'delete_threshold': 10
         },
-        'self_play_number': 500,
+        'self_play_number': 200,
         'self_play_batch_size': 50,
         'self_play_cache_step': 1,
         'evaluate_mcts_config': {
@@ -21,10 +21,12 @@ def run():
             'thread_number': 1, 'delete_threshold': 10
         },
         'evaluate_number': 25,
+        'evaluate_batch_size': 50,
         'evaluate_win_ratio': 0.55,
+        'evaluate_cache_step': 1,
         'train': {
             'batch_size': 128,
-            'epochs': 10,
+            'epochs': 20,
             'verbose': 1
         }
     }

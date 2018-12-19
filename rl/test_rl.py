@@ -20,6 +20,7 @@ kwargs = {
         'thread_number': 1, 'delete_threshold': 100
     },
     'evaluate_number': 5,
+    'evaluate_batch_size': 10, 
     'evaluate_win_ratio': 0.55,
     'evaluate_cache_step': 5,
     'train': {

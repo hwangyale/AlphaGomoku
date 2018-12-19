@@ -1,1 +1,1 @@
-"{\"config\": {\"lr\": 0.01, \"nesterov\": true, \"momentum\": 0.9}, \"class_name\": \"sgd\"}"
+"{\"class_name\": \"sgd\", \"config\": {\"momentum\": 0.9, \"nesterov\": true, \"lr\": 0.01}}"

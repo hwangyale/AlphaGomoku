@@ -62,7 +62,11 @@ class MCTSBoard(Board):
             self.bounds = [row - MCTS_BOUND, row + MCTS_BOUND,
                            col - MCTS_BOUND, col + MCTS_BOUND]
 
-    def expand(self):
+    def expand(self,
+               attack_vct_depth=MCTS_VCT_DEPTH,
+               attack_vct_time=MCTS_VCT_TIME,
+               defend_vct_depth=MCTS_DEFEND_VCT_DEPTH,
+               defend_vct_time=MCTS_DEFEND_VCT_TIME):
         if self.is_over:
             if self.winner != DRAW:
                 return [], MCTS_LOSS_VALUE
@@ -86,7 +90,7 @@ class MCTSBoard(Board):
         if len(actions) > 0:
             return actions, MCTS_WIN_VALUE
 
-        action = self.vct(MCTS_VCT_DEPTH, MCTS_VCT_TIME)
+        action = self.vct(attack_vct_depth, attack_vct_time)
         if action is not None:
             return [action], MCTS_WIN_VALUE
 
@@ -98,8 +102,8 @@ class MCTSBoard(Board):
         bounded_actions = [action for action in legal_actions
                            if self.check_bound(action)]
         actions = [action for action in bounded_actions
-                   if self.defend_vct(action, MCTS_DEFEND_VCT_DEPTH,
-                                      MCTS_DEFEND_VCT_TIME)]
+                   if self.defend_vct(action, defend_vct_depth,
+                                      defend_vct_time)]
         if len(actions) > 0:
             return actions, None
         elif len(bounded_actions) > 0:
@@ -269,10 +273,10 @@ class Node(object):
         max_node.estimate(board)
         return max_node
 
-    def estimate(self, board):
+    def estimate(self, board, *args, **kwargs):
         if not self.estimated:
             if board.zobristKey not in self.value_table:
-                expand_actions, value = board.expand()
+                expand_actions, value = board.expand(*args, **kwargs)
                 self.action_table[board.zobristKey] = expand_actions
                 self.value_table[board.zobristKey] = value
                 self.key_queue.put(board.zobristKey)

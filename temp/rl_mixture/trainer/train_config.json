@@ -1,1 +1,1 @@
-"{\"epochs\": 2, \"initial_epoch\": 1, \"verbose\": 1, \"batch_size\": 128}"
+"{\"initial_epoch\": 1, \"verbose\": 1, \"batch_size\": 128, \"epochs\": 2}"
