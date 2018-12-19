@@ -10,21 +10,21 @@ def run():
 
     kwargs = {
         'self_play_mcts_config': {
-            'traverse_time': 1000, 'c_puct': None,
+            'traverse_time': 500, 'c_puct': None,
             'thread_number': 1, 'delete_threshold': 10
         },
-        'self_play_number': 1000,
-        'self_play_batch_size': 10,
-        'self_play_cache_step': 2,
+        'self_play_number': 500,
+        'self_play_batch_size': 50,
+        'self_play_cache_step': 1,
         'evaluate_mcts_config': {
-            'traverse_time': 1000, 'c_puct': None,
+            'traverse_time': 500, 'c_puct': None,
             'thread_number': 1, 'delete_threshold': 10
         },
         'evaluate_number': 25,
         'evaluate_win_ratio': 0.55,
         'train': {
             'batch_size': 128,
-            'epochs': 100,
+            'epochs': 10,
             'verbose': 1
         }
     }
