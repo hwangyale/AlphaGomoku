@@ -11,6 +11,22 @@ from ..utils.zobrist_utils import get_zobrist_key, hash_history
 BASE_BOARD = Board(toTensor=True, visualization=False, defend=False)
 
 
+def get_bound_table(delta=MCTS_BOUND):
+    table = []
+    for act in range(BOARD_SIZE**2):
+        bound = 0 | BINARY_HEPLERS[act]
+        row, col = unflatten(act)
+        for sign in [-1, 1]:
+            for d in range(1, delta+1):
+                for func in move_functions:
+                    temp_row, temp_col = func((row, col), sign*d)
+                    if 0 <= temp_row < BOARD_SIZE and 0 <= temp_col < BOARD_SIZE:
+                        bound |= BINARY_HEPLERS[flatten((temp_row, temp_col))]
+        table.append(bound)
+    return table
+BOUND_TABLE = get_bound_table()
+
+
 class MCTSBoard(Board):
     def __init__(self, board=None, initialize=True):
         if board is None:
@@ -27,11 +43,11 @@ class MCTSBoard(Board):
             else:
                 self.initialize_tensor()
 
-            self.bounds = []
-
             self.visualization = False
             self.defend = False
             self._zobristKey = copy_board._zobristKey
+
+            self.initialize_bound()
 
     def initialize_tensor(self):
         tensors = {BLACK: np.zeros((BOARD_SIZE, BOARD_SIZE, 3),
@@ -50,17 +66,16 @@ class MCTSBoard(Board):
 
         self.tensors = tensors
 
+    def initialize_bound(self):
+        self.bound = 0
+        for action in self.history:
+            self.bound |= BOUND_TABLE[flatten(action)]
+
     def move(self, action, *args, **kwargs):
+        if not hasattr(self, 'bound'):
+            self.initialize_bound()
         super(MCTSBoard, self).move(action, *args, **kwargs)
-        row, col = action
-        if len(self.bounds) > 0:
-            self.bounds[0] = min(self.bounds[0], row - MCTS_BOUND)
-            self.bounds[1] = max(self.bounds[1], row + MCTS_BOUND)
-            self.bounds[2] = min(self.bounds[2], col - MCTS_BOUND)
-            self.bounds[3] = max(self.bounds[3], col + MCTS_BOUND)
-        else:
-            self.bounds = [row - MCTS_BOUND, row + MCTS_BOUND,
-                           col - MCTS_BOUND, col + MCTS_BOUND]
+        self.bound |= BOUND_TABLE[flatten(action)]
 
     def expand(self,
                attack_vct_depth=MCTS_VCT_DEPTH,
@@ -114,12 +129,13 @@ class MCTSBoard(Board):
             raise Exception('non of legal actions')
 
     def check_bound(self, action):
-        row, col = action
-        if len(self.bounds) == 0:
+        if self.step == 0:
+            row, col = action
             half = BOARD_SIZE // 2
             return half - 2 <= row <= half + 2 and half - 2 <= col <= half + 2
-        bounds = self.bounds
-        return bounds[0] <= row <= bounds[1] and bounds[2] <= col <= bounds[3]
+        if not hasattr(self, 'bound'):
+            self.initialize_bound()
+        return (self.bound & BINARY_HEPLERS[flatten(action)]) > 0
 
     def copy(self):
         new_board = MCTSBoard(initialize=False)
@@ -130,7 +146,8 @@ class MCTSBoard(Board):
         new_board.toTensor = True
         new_board.tensors = {c: t.copy() for c, t in self.tensors.items()}
 
-        new_board.bounds = self.bounds[:]
+        if hasattr(self, 'bound'):
+            new_board.bound = self.bound | 0
 
         new_board.visualization = False
         new_board.defend = False

@@ -7,6 +7,13 @@ tolist = lambda x: x if isinstance(x, list) else [x]
 tosingleton = lambda x: x[0] if len(x) == 1 else x
 player_map = lambda x: WHITE if x == BLACK else BLACK
 
+hor_move = lambda act, d: (act[0], act[1]+d)
+ver_move = lambda act, d: (act[0]+d, act[1])
+dia_move = lambda act, d: (act[0]+d, act[1]+d)
+bac_move = lambda act, d: (act[0]+d, act[1]-d)
+
+move_functions = [hor_move, ver_move, dia_move, bac_move]
+
 def multinomial_sampling(probs):
     s = random()
     if s <= probs[0]:
