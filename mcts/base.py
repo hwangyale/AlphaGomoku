@@ -184,7 +184,6 @@ class Node(object):
         self.indice2parents = {}
         self.expanded = False
         self.value = None
-        self.estimated = False
         self.W_r = 0.0
         self.W_v = 0.0
         self.N_r = 0.0
@@ -195,7 +194,6 @@ class Node(object):
         self.indice2parents = {}
         self.expanded = False
         self.value = None
-        self.estimated = False
 
     def develop(self, board, distribution):
         if self.expanded:
@@ -274,16 +272,14 @@ class Node(object):
         return max_node
 
     def estimate(self, board, *args, **kwargs):
-        if not self.estimated:
-            if board.zobristKey not in self.value_table:
-                expand_actions, value = board.expand(*args, **kwargs)
-                self.action_table[board.zobristKey] = expand_actions
-                self.value_table[board.zobristKey] = value
-                self.key_queue.put(board.zobristKey)
-            else:
-                value = self.value_table[board.zobristKey]
-            self.value = value
-            self.estimated = True
+        if board.zobristKey not in self.value_table:
+            expand_actions, value = board.expand(*args, **kwargs)
+            self.action_table[board.zobristKey] = expand_actions
+            self.value_table[board.zobristKey] = value
+            self.key_queue.put(board.zobristKey)
+        else:
+            value = self.value_table[board.zobristKey]
+        self.value = value
 
     def update(self, value, thread_index,
                virtual_loss=None, virtual_visit=None):
@@ -314,7 +310,6 @@ class Node(object):
             'indice2parents': self.indice2parents,
             'expanded': self.expanded,
             'value': self.value,
-            'estimated': self.estimated,
             'W_r': self.W_r,
             'W_v': self.W_v,
             'N_r': self.N_r,
