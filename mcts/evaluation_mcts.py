@@ -52,8 +52,16 @@ class EvaluationTraversal(threading.Thread):
                     condition.wait()
                     condition.release()
                     break
+                if node == root:
+                    kwargs = {
+                        'attack_vct_depth': MCTS_ROOT_CHILD_VCT_DEPTH,
+                        'attack_vct_time': MCTS_ROOT_CHILD_VCT_TIME,
+                        'iterative_deepening_mode': True
+                    }
+                else:
+                    kwargs = {}
                 node = node.select(board, thread_index, virtual_loss,
-                                   virtual_visit, c_puct)
+                                   virtual_visit, c_puct, **kwargs)
                 condition.release()
 
 
@@ -136,6 +144,10 @@ class EvaluationMCTS(MCTSBase):
                 actions[board] = self.process_root(board, root)
             else:
                 roots[board] = root
+                color = board.player
+                key = board.zobristKey
+                for action in self.action_table[key]:
+                    self.value_table.pop(get_zobrist_key(color, action, key), None)
 
         if len(roots) == 0:
             return tosingleton([actions[board] for board in boards])
