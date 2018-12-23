@@ -14,7 +14,7 @@ from .evaluation_mcts import EvaluationTraversal, EvaluationMCTS
 
 class RLNode(Node):
     def select(self, board, thread_index, virtual_loss=None,
-               virtual_visit=None, c_puct=None):
+               virtual_visit=None, c_puct=None, **kwargs):
         if virtual_loss is None:
             virtual_loss = MCTS_VIRTUAL_LOSS
         if virtual_visit is None:
@@ -73,7 +73,7 @@ class RLNode(Node):
         max_node.W_v -= virtual_loss
         max_node.N_v += virtual_visit
         board.move(max_action)
-        max_node.estimate(board)
+        max_node.estimate(board, **kwargs)
         return max_node
 
 
