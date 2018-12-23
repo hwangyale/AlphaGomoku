@@ -26,7 +26,7 @@ def run():
         'evaluate_cache_step': 1,
         'train': {
             'batch_size': 128,
-            'epochs': 20,
+            'epochs': 100,
             'verbose': 1
         }
     }
