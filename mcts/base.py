@@ -81,7 +81,8 @@ class MCTSBoard(Board):
                attack_vct_depth=MCTS_VCT_DEPTH,
                attack_vct_time=MCTS_VCT_TIME,
                defend_vct_depth=MCTS_DEFEND_VCT_DEPTH,
-               defend_vct_time=MCTS_DEFEND_VCT_TIME):
+               defend_vct_time=MCTS_DEFEND_VCT_TIME,
+               **kwargs):
         if self.is_over:
             if self.winner != DRAW:
                 return [], MCTS_LOSS_VALUE
@@ -105,7 +106,7 @@ class MCTSBoard(Board):
         if len(actions) > 0:
             return actions, MCTS_WIN_VALUE
 
-        action = self.vct(attack_vct_depth, attack_vct_time)
+        action = self.vct(attack_vct_depth, attack_vct_time, **kwargs)
         if action is not None:
             return [action], MCTS_WIN_VALUE
 

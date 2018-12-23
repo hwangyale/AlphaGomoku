@@ -1,3 +1,4 @@
+import time
 from ..global_constants import *
 from ..common import *
 from .swig_board import board as cppBoard
@@ -17,8 +18,17 @@ class CPPBoard(object):
         actions = self.cpp_board.get_actions(is_player, gomoku_type)
         return [unflatten(act) for act in self.cpp_board.get_actions(is_player, gomoku_type)]
 
-    def vct(self, max_depth=20, max_time=1):
-        action = self.cpp_board.Vct(max_depth, max_time)
+    def vct(self, max_depth=20, max_time=1, iterative_deepening_mode=False):
+        if iterative_deepening_mode and max_depth >= 6:
+            depth = 6
+            action = -1
+            start = time.time()
+            while action < 0 and depth <= max_depth \
+                and time.time() - start < max_time:
+                action = self.cpp_board.Vct(depth, max_time-(time.time()-start))
+                depth += 2
+        else:
+            action = self.cpp_board.Vct(max_depth, max_time)
         if action < 0:
             return None
         return unflatten(action)
