@@ -26,11 +26,11 @@ def main(max_time):
                 continue
             flag = False
             time = 0
-            # print('t:{}'.format(t))
+            print('t:{}'.format(t))
             while time < max_time:
                 time += 1
-                # print('time:{:.1f}'.format(0.1*time))
-                if board.vct(20, time, True) is not None:
+                print('time:{:.1f}'.format(0.1*time))
+                if board.vct(16, time, False) is not None:
                     flag = True
                     counter[time] += 1
                     break

@@ -56,7 +56,7 @@ class EvaluationTraversal(threading.Thread):
                     kwargs = {
                         'attack_vct_depth': MCTS_ROOT_CHILD_VCT_DEPTH,
                         'attack_vct_time': MCTS_ROOT_CHILD_VCT_TIME,
-                        'iterative_deepening_mode': True
+                        'iterative_deepening_mode': False
                     }
                 else:
                     kwargs = {}
