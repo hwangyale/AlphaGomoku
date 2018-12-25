@@ -317,7 +317,7 @@ void Node::develop(int current, int unknown, std::unordered_map<U64, bool> &cach
 	BitBoard backup = board;
 	for (int idx = end - 1; idx >= begin; idx--)
 	{
-		_action = VCT_SHARED_ACTIONS[idx];
+		_action = (int)VCT_SHARED_ACTIONS[idx];
 		_pointer = allocate_node();
 		_board_pointer = allocate_board();
 		BitBoard &_board = BOARD_TABLE[_board_pointer];
@@ -383,7 +383,7 @@ int vct(BitBoard &board, int max_depth, double max_time)
 	{
 		if (value)
 		{
-			return VCT_SHARED_ACTIONS[0];
+			return (int)VCT_SHARED_ACTIONS[0];
 		}
 		else
 		{

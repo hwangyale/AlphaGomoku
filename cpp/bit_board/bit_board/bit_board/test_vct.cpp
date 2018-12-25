@@ -6,9 +6,16 @@ extern void print_potential_actions(BitBoard &board);
 
 int main()
 {
-	int _actions[16] = { 7 * 15 + 7, 6 * 15 + 7, 6 * 15 + 8, 7 * 15 + 8, 6 * 15 + 6, 6 * 15 + 5,
+	/*int _actions[16] = { 7 * 15 + 7, 6 * 15 + 7, 6 * 15 + 8, 7 * 15 + 8, 6 * 15 + 6, 6 * 15 + 5,
 	5 * 15 + 6, 4 * 15 + 6, 5 * 15 + 5, 4 * 15 + 4, 7 * 15 + 6, 5 * 15 + 9,
 	8 * 15 + 6, 9 * 15 + 6, 8 * 15 + 7, 8 * 15 + 5 };
+	IVEC actions(_actions, _actions + 16);*/
+
+	int _actions[16] = {
+		8 * 15 + 7, 9 * 15 + 7, 6 * 15 + 7, 9 * 15 + 8, 7 * 15 + 8, 6 * 15 + 9,
+		7 * 15 + 6, 7 * 15 + 9, 9 * 15 + 9, 8 * 15 + 8, 10 * 15 + 6, 8 * 15 + 6,
+		7 * 15 + 4, 6 * 15 + 10, 5 * 15 + 11, 7 * 15 + 7
+	};
 	IVEC actions(_actions, _actions + 16);
 
 	BitBoard board;
@@ -57,14 +64,16 @@ int main()
 	std::cout << vct_action / BOARD_SIZE << " " << vct_action % BOARD_SIZE << std::endl;
 	printf("time: %.4f\n", (double)(clock() - start));*/
 
-	UC action;
+	int action;
 	while (!board.is_over)
 	{
 		if (board.player == BLACK)
 		{
 			clock_t start = clock();
-			action = vct(board, 20, 3600);
+			action = vct(board, 12, 3600);
+			std::cout << "action: " << action << std::endl;
 			printf("vct time: %.4fms\n", (double)(clock() - start));
+			printf("move: %d %d\n", action / BOARD_SIZE, action % BOARD_SIZE);
 		}
 		else
 		{
@@ -80,7 +89,6 @@ int main()
 		}
 		board.move(action);
 		print_board(board);
-		printf("move: %d %d\n", action / BOARD_SIZE, action % BOARD_SIZE);
 	}
 
 	return 0;
