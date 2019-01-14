@@ -168,7 +168,7 @@ class Evaluator(object):
             'boards_each_side': self.boards_each_side,
             'batch_size': self.batch_size,
             'boards': [(id(board), ply) for board, ply in self.boards],
-            'count': self.count, 
+            'count': self.count,
             'player': self.player,
             'step': self.step,
             'finished': self.finished,
